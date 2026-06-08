@@ -4,11 +4,11 @@ from PIL import Image
 
 class Club:
 
-    def __init__(self, name, loft, carry, colour):
+    def __init__(self, name, launch_angle, ball_speed, colour):
 
         self.name = name
-        self.loft = loft
-        self.carry = carry
+        self.launch_angle = launch_angle
+        self.ball_speed = ball_speed
         self.colour = colour
 
 class Hole:
@@ -28,22 +28,22 @@ class Hole:
 
         #Typical carry distance for an average male amateur golfer
         self.clubs = [
-            Club("Driver", 10.5, 240, "red"),
-            Club("3 Wood", 15, 220, "orangered"),
-            Club("5 Wood", 18, 205, "orange"),
-            Club("3 Hybrid", 19, 200, "lime"),
-            Club("4 Hybrid", 22, 190, "limegreen"),
-            Club("4 Iron", 21, 190, "dodgerblue"),
-            Club("5 Iron", 24, 180, "blue"),
-            Club("6 Iron", 27, 170, "mediumblue"),
-            Club("7 Iron", 30, 160, "royalblue"),
-            Club("8 Iron", 34.5, 150, "navy"),
-            Club("9 Iron", 39, 140, "skyblue"),
-            Club("Pitching Wedge", 44, 130, "magenta"),
-            Club("Gap Wedge", 49, 115, "violet"),
-            Club("Sand Wedge", 54, 100, "orchid"),
-            Club("Lob Wedge", 58, 90, "purple"),
-            Club("Putter", 3, 50, "white")
+            Club("Driver", 12.6, 133, "red"),
+            Club("3 Wood", 11.5, 125, "orangered"),
+            Club("5 Wood", 13.0, 120, "orange"),
+            Club("3 Hybrid", 14.0, 116, "lime"),
+            Club("4 Hybrid", 15.0, 112, "limegreen"),
+            Club("4 Iron", 13.0, 108, "dodgerblue"),
+            Club("5 Iron", 14.0, 104, "blue"),
+            Club("6 Iron", 15.5, 100, "mediumblue"),
+            Club("7 Iron", 17.0, 96, "royalblue"),
+            Club("8 Iron", 19.0, 92, "navy"),
+            Club("9 Iron", 21.0, 88, "skyblue"),
+            Club("Pitching Wedge", 24.0, 83, "magenta"),
+            Club("Gap Wedge", 27.0, 79, "violet"),
+            Club("Sand Wedge", 30.0, 74, "orchid"),
+            Club("Lob Wedge", 33.0, 69, "purple"),
+            Club("Putter", 3.0, 15, "white")
         ]
 
     def load_heightmap(self, path):
@@ -97,23 +97,21 @@ class Hole:
 
     def get_height(self, x, y):
         
-        x = int(np.clip(x, 0, self.cols - 1))
-        y = int(np.clip(y, 0, self.rows - 1))
+        x = round(np.clip(x, 0, self.cols - 1))
+        y = round(np.clip(y, 0, self.rows - 1))
         
         return self.heightmap[y, x]
     
     def simulate_shot(self, start_position, power, direction, club_index):
 
-        gravity = 9.81
-        dt = 0.05
+        gravity = 10.73
+        dt = 0.01
 
         club = self.clubs[int(club_index)]
 
-        desired_carry = club.carry * (power / 100.0)
+        speed = club.ball_speed * 0.48889 * (power / 100.0)
 
-        launch_angle = np.radians(club.loft)
-
-        speed = np.sqrt(desired_carry * gravity / np.sin(2 * launch_angle))
+        launch_angle = np.radians(club.launch_angle)
 
         direction_angle = np.radians(direction)
 
@@ -144,7 +142,7 @@ class Hole:
 
             terrain = self.get_height(x, y)
 
-            if z <= terrain:
+            if vz <= -0 and z <= terrain:
                 z = terrain
                 surface = self.get_surface(x, y)
                 trajectory.append([x, y, z])
@@ -154,40 +152,55 @@ class Hole:
 
         if horizontal_speed > 0:
 
-            roll_speed = horizontal_speed * 0.15
+            roll_vx = vx * 0.15
+            roll_vy = vy * 0.15
 
-            while roll_speed > 0.1:
-
-                h = self.get_height(x, y)
-                hx1 = self.get_height(max(x - 1, 0), y)
-                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
-                hy1 = self.get_height(x, max(y - 1, 0))
-                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
-
-                slope_x = (hx2 - hx1) / 2
-                slope_y = (hy2 - hy1) / 2
-
-                x += (vx / horizontal_speed) * roll_speed * dt
-                y += (vy / horizontal_speed) * roll_speed * dt
-
-                x -= slope_x * 0.5
-                y -= slope_y * 0.5
+            while True:
+                
+                if x < 0 or x >= self.cols or y < 0 or y >= self.rows:
+                    break
 
                 surface = self.get_surface(x, y)
 
                 if surface == "out":
                     return np.array([x, y, z]), trajectory, False
 
-                if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
-                    break
-            
+                hx1 = self.get_height(max(x - 1, 0), y)
+                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
+                hy1 = self.get_height(x, max(y - 1, 0))
+                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
+
+                slope_x = (hx2 - hx1) / 2.0
+                slope_y = (hy2 - hy1) / 2.0
+
+                roll_vx -= slope_x * gravity * dt
+                roll_vy -= slope_y * gravity * dt
+
+                if surface == "green":
+                    friction = 0.995
+                elif surface == "fairway":
+                    friction = 0.985
+                elif surface == "rough":
+                    friction = 0.975
+                elif surface == "bunker":
+                    friction = 0.90
+                else:
+                    friction = 0.985
+
+                roll_vx *= friction
+                roll_vy *= friction
+
+                x += roll_vx * dt
+                y += roll_vy * dt
+
                 z = self.get_height(x, y)
 
                 trajectory.append([x, y, z])
 
-                roll_speed *= 0.95
+                roll_speed = np.sqrt(roll_vx**2 + roll_vy**2)
 
-        surface = self.get_surface(x, y)
+                if roll_speed < 0.1:
+                    break
 
         return np.array([x, y, z]), trajectory, True
 
