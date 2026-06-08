@@ -1,0 +1,18 @@
+// General configuration
+// Task could be GA,NSGA2,test
+task=GA
+
+maxShots=5
+
+lowerBounds=0,0,0
+upperBounds=100,360,15
+
+// EA Parameters
+popSize=50
+generations=100
+objectives=1
+trace=0
+
+//Hole Info
+heightmap=flatheightmap.png
+surfacemap=flatsurfacemap.png

@@ -1,0 +1,256 @@
+import numpy as np
+import pyvista as pv
+from PIL import Image
+
+class Club:
+
+    def __init__(self, name, loft, carry):
+
+        self.name = name
+        self.loft = loft
+        self.carry = carry
+
+class Hole:
+
+    def __init__(self, heightmap_path, surfacemap_path):
+
+        self.heightmap = self.load_heightmap(heightmap_path)
+
+        self.surfacemap = self.load_surfacemap(surfacemap_path)
+
+        self.rows, self.cols = self.heightmap.shape
+
+        self.create_mesh()
+
+        #Example I will use coloured map.
+        self.tee_position = np.array([315,572, 37])
+        self.hole_position = np.array([383, 117, 21])
+
+        #Typical carry distance for an average male amateur golfer
+        self.clubs = [
+            Club("Driver", 10.5, 240),
+            Club("3 Wood", 15, 220),
+            Club("5 Wood", 18, 205),
+            Club("3 Hybrid", 19, 200),
+            Club("4 Hybrid", 22, 190),
+            Club("4 Iron", 21, 190),
+            Club("5 Iron", 24, 180),
+            Club("6 Iron", 27, 170),
+            Club("7 Iron", 30, 160),
+            Club("8 Iron", 34.5, 150),
+            Club("9 Iron", 39, 140),
+            Club("Pitching Wedge", 44, 130),
+            Club("Gap Wedge", 49, 115),
+            Club("Sand Wedge", 54, 100),
+            Club("Lob Wedge", 58, 90),
+            Club("Putter", 3, 50)
+        ]
+
+    def load_heightmap(self, path):
+
+        img = Image.open(path).convert("L")
+
+        height = np.array(img).astype(np.float32)
+
+        height /= 255.0
+        height *= 65.0
+
+        return height
+    
+    def load_surfacemap(self, path):
+        
+        img = Image.open(path).convert("RGB")
+
+        surface = np.array(img)
+        
+        return surface
+    
+    def get_surface(self, x, y):
+
+        x = int(np.clip(x, 0, self.cols - 1))
+        y = int(np.clip(y, 0, self.rows - 1))
+
+        colour = tuple(self.surfacemap[y, x])
+
+        surfaces = {
+            (102,205,102): "fairway",
+            (34,139,34): "rough",
+            (50,205,50): "green",
+            (237,201,175): "bunker",
+            (254,255,255): "out"
+        }
+
+        return surfaces.get(colour, "unknown")
+
+    def create_mesh(self):
+
+        x = np.arange(self.cols, dtype=np.float32)
+        y = np.arange(self.rows, dtype=np.float32)
+
+        xx, yy = np.meshgrid(x, y)
+
+        self.grid = pv.StructuredGrid(
+            xx,
+            yy,
+            self.heightmap
+        )
+
+    def get_height(self, x, y):
+        
+        x = int(np.clip(x, 0, self.cols - 1))
+        y = int(np.clip(y, 0, self.rows - 1))
+        
+        return self.heightmap[y, x]
+    
+    def simulate_shot(self, start_position, power, direction, club_index):
+
+        gravity = 9.81
+        dt = 0.05
+
+        club = self.clubs[int(club_index)]
+
+        desired_carry = club.carry * (power / 100.0)
+
+        launch_angle = np.radians(club.loft)
+
+        speed = np.sqrt(desired_carry * gravity / np.sin(2 * launch_angle))
+
+        direction_angle = np.radians(direction)
+
+        x = start_position[0]
+        y = start_position[1]
+        z = self.get_height(x, y)
+
+        trajectory = []
+
+        vx = speed * np.cos(launch_angle) * np.cos(direction_angle)
+        vy = speed * np.cos(launch_angle) * np.sin(direction_angle)
+        vz = speed * np.sin(launch_angle)
+
+        landed = False
+
+        while not landed:
+
+            x += vx * dt
+            y += vy * dt
+            z += vz * dt
+
+            vz -= gravity * dt
+
+            trajectory.append([x, y, z])
+
+            if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
+                break
+
+            terrain = self.get_height(x, y)
+
+            if z <= terrain:
+                z = terrain
+                surface = self.get_surface(x, y)
+                trajectory.append([x, y, z])
+                landed = True
+        
+        horizontal_speed = np.sqrt(vx**2 + vy**2)
+
+        if horizontal_speed > 0:
+
+            roll_speed = horizontal_speed * 0.15
+
+            while roll_speed > 0.1:
+
+                h = self.get_height(x, y)
+                hx1 = self.get_height(max(x - 1, 0), y)
+                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
+                hy1 = self.get_height(x, max(y - 1, 0))
+                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
+
+                slope_x = (hx2 - hx1) / 2
+                slope_y = (hy2 - hy1) / 2
+
+                x += (vx / horizontal_speed) * roll_speed * dt
+                y += (vy / horizontal_speed) * roll_speed * dt
+
+                x -= slope_x * 0.5
+                y -= slope_y * 0.5
+
+                surface = self.get_surface(x, y)
+
+                if surface == "out":
+                    return np.array([x, y, z]), trajectory, False
+
+                if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
+                    break
+            
+                z = self.get_height(x, y)
+
+                trajectory.append([x, y, z])
+
+                roll_speed *= 0.95
+
+        surface = self.get_surface(x, y)
+
+        return np.array([x, y, z]), trajectory, True
+
+    def show(self):
+
+        plotter = pv.Plotter()
+
+        plotter.add_mesh(self.grid, cmap="terrain")
+
+        def pick_point(point):
+            print("\nSelected point:")
+            print("X =", int(point[0]))
+            print("Y =", int(point[1]))
+            print("Z =", point[2])
+
+        plotter.enable_point_picking(callback=pick_point, show_message=True)
+
+        plotter.show()
+
+    def show_shot(self, start_position, power, direction, club_index): 
+        
+        _, trajectory, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        
+        plotter = pv.Plotter() 
+
+        rgb = np.flipud(np.rot90(self.surfacemap))
+        rgb = rgb.reshape(-1, 3)
+
+        self.grid["SurfaceColours"] = rgb
+        
+        plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
+        
+        path = pv.lines_from_points(np.array(trajectory)) 
+        
+        plotter.add_mesh(path, line_width=5) 
+        
+        plotter.show()
+
+    def show_strategy(self, variables):
+
+        position = np.copy(self.tee_position)
+
+        plotter = pv.Plotter()
+
+        rgb = np.flipud(np.rot90(self.surfacemap))
+        rgb = rgb.reshape(-1, 3)
+
+        self.grid["SurfaceColours"] = rgb
+        
+        plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
+
+        for i in range(0, len(variables), 3):
+
+            power = variables[i]
+            direction = variables[i + 1]
+
+            club = int(round(variables[i + 2]))
+            club = np.clip(club, 0, len(self.clubs) - 1)
+
+            position, trajectory, _ = self.simulate_shot(position, power, direction, club)
+
+            path = pv.lines_from_points(np.array(trajectory))
+
+            plotter.add_mesh(path, line_width=5, label=f"Shot {(i//3)+1}")
+
+        plotter.show()
