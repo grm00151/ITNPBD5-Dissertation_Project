@@ -4,11 +4,12 @@ from PIL import Image
 
 class Club:
 
-    def __init__(self, name, loft, carry):
+    def __init__(self, name, loft, carry, colour):
 
         self.name = name
         self.loft = loft
         self.carry = carry
+        self.colour = colour
 
 class Hole:
 
@@ -22,28 +23,27 @@ class Hole:
 
         self.create_mesh()
 
-        #Example I will use coloured map.
-        self.tee_position = np.array([315,572, 37])
-        self.hole_position = np.array([383, 117, 21])
+        self.tee_position = np.array([320,572, 37])
+        self.hole_position = np.array([320, 117, 21])
 
         #Typical carry distance for an average male amateur golfer
         self.clubs = [
-            Club("Driver", 10.5, 240),
-            Club("3 Wood", 15, 220),
-            Club("5 Wood", 18, 205),
-            Club("3 Hybrid", 19, 200),
-            Club("4 Hybrid", 22, 190),
-            Club("4 Iron", 21, 190),
-            Club("5 Iron", 24, 180),
-            Club("6 Iron", 27, 170),
-            Club("7 Iron", 30, 160),
-            Club("8 Iron", 34.5, 150),
-            Club("9 Iron", 39, 140),
-            Club("Pitching Wedge", 44, 130),
-            Club("Gap Wedge", 49, 115),
-            Club("Sand Wedge", 54, 100),
-            Club("Lob Wedge", 58, 90),
-            Club("Putter", 3, 50)
+            Club("Driver", 10.5, 240, "red"),
+            Club("3 Wood", 15, 220, "orangered"),
+            Club("5 Wood", 18, 205, "orange"),
+            Club("3 Hybrid", 19, 200, "lime"),
+            Club("4 Hybrid", 22, 190, "limegreen"),
+            Club("4 Iron", 21, 190, "dodgerblue"),
+            Club("5 Iron", 24, 180, "blue"),
+            Club("6 Iron", 27, 170, "mediumblue"),
+            Club("7 Iron", 30, 160, "royalblue"),
+            Club("8 Iron", 34.5, 150, "navy"),
+            Club("9 Iron", 39, 140, "skyblue"),
+            Club("Pitching Wedge", 44, 130, "magenta"),
+            Club("Gap Wedge", 49, 115, "violet"),
+            Club("Sand Wedge", 54, 100, "orchid"),
+            Club("Lob Wedge", 58, 90, "purple"),
+            Club("Putter", 3, 50, "white")
         ]
 
     def load_heightmap(self, path):
@@ -207,7 +207,7 @@ class Hole:
 
         plotter.show()
 
-    def show_shot(self, start_position, power, direction, club_index): 
+    def show_shot(self, start_position, power, direction, club_index):
         
         _, trajectory, _ = self.simulate_shot(start_position, power, direction, club_index) 
         
@@ -219,11 +219,14 @@ class Hole:
         self.grid["SurfaceColours"] = rgb
         
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
+
+        club = self.clubs[club_index]
         
         path = pv.lines_from_points(np.array(trajectory)) 
         
-        plotter.add_mesh(path, line_width=5) 
+        plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name) 
         
+        plotter.add_legend()
         plotter.show()
 
     def show_strategy(self, variables):
@@ -236,7 +239,7 @@ class Hole:
         rgb = rgb.reshape(-1, 3)
 
         self.grid["SurfaceColours"] = rgb
-        
+
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
         for i in range(0, len(variables), 3):
@@ -244,13 +247,16 @@ class Hole:
             power = variables[i]
             direction = variables[i + 1]
 
-            club = int(round(variables[i + 2]))
-            club = np.clip(club, 0, len(self.clubs) - 1)
+            club_index = int(round(variables[i + 2]))
+            club_index = np.clip(club_index, 0, len(self.clubs) - 1)
 
-            position, trajectory, _ = self.simulate_shot(position, power, direction, club)
+            position, trajectory, _ = self.simulate_shot(position, power, direction, club_index)
+
+            club = self.clubs[club_index]
 
             path = pv.lines_from_points(np.array(trajectory))
 
-            plotter.add_mesh(path, line_width=5, label=f"Shot {(i//3)+1}")
-
+            plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name)
+        
+        plotter.add_legend()
         plotter.show()
