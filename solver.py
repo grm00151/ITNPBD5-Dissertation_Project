@@ -19,6 +19,7 @@ from jmetal.core.solution import BinarySolution, FloatSolution
 from jmetal.util.termination_criterion import StoppingByEvaluations
 # from examples.singleobjective import genetic_algorithm
 from jmetal import algorithm
+from tqdm import tqdm 
 
 
 from eval import Eval
@@ -127,6 +128,14 @@ class Solver:
 		
 			
 	def solveGA(self,problem):
+		max_eval = int(self.prm['maxEval'])
+		pbar = tqdm(total=max_eval, desc="GA", unit="eval")
+		original_evaluate = problem.evaluate
+		def wrapped_evaluate(solution):
+			result = original_evaluate(solution)
+			pbar.update(1)
+			return result
+		problem.evaluate = wrapped_evaluate
 		tic = timeit.default_timer()
 		algorithm = GeneticAlgorithm(
 			problem=problem,
@@ -137,7 +146,10 @@ class Solver:
 			selection=BinaryTournamentSelection(),
 			termination_criterion=StoppingByEvaluations(max_evaluations=int(self.prm['maxEval']))
 		)
-		algorithm.run()
+		try:
+			algorithm.run()
+		finally:		
+			pbar.close()
 		toc = timeit.default_timer()
 		results = algorithm.result()
 		problem.course.show_strategy(results.variables)
@@ -148,12 +160,20 @@ class Solver:
 			time.sleep(0.5)
 			
 		# Uncomment the following line to show the best solution
-		score = problem.evaluate(results)
+		score = original_evaluate(results)
 		eprint("Score: %.2f" % (results.objectives[0]))
 
 			
 				
 	def solveNSGA2(self,problem):
+		max_eval = int(self.prm['maxEval'])
+		pbar = tqdm(total=max_eval, desc="NSGA-II", unit="eval")
+		original_evaluate = problem.evaluate
+		def wrapped_evaluate(solution):
+			result = original_evaluate(solution)
+			pbar.update(1)
+			return result
+		problem.evaluate = wrapped_evaluate
 		tic = timeit.default_timer()
 		# binary_string_length = 32
 		#problem = OneZeroMax(binary_string_length)
@@ -167,8 +187,10 @@ class Solver:
 			# crossover=SPXCrossover(probability=1.0),
 			termination_criterion=StoppingByEvaluations(max_evaluations=int(self.prm['maxEval']))
 			)
-
-		algorithm.run()
+		try:
+			algorithm.run()
+		finally:
+			pbar.close()
 		front = algorithm.result()
 		best = min(front, key=lambda s: (s.objectives[0], s.objectives[1])) 
 		problem.course.show_strategy(best.variables)

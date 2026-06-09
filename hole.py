@@ -23,8 +23,13 @@ class Hole:
 
         self.create_mesh()
 
-        self.tee_position = np.array([320,572, 37])
-        self.hole_position = np.array([320, 117, 21])
+        #Hole 3 - Towers
+        self.tee_position = np.array([316,570, 37])
+        self.hole_position = np.array([384, 117, 21])
+
+        #Flat
+        #self.tee_position = np.array([320,570, 37])
+        #self.hole_position = np.array([320, 111, 21])
 
         #Typical carry distance for an average male amateur golfer
         self.clubs = [
@@ -105,7 +110,7 @@ class Hole:
     def simulate_shot(self, start_position, power, direction, club_index):
 
         gravity = 10.73
-        dt = 0.01
+        dt = 0.05
 
         club = self.clubs[int(club_index)]
 
@@ -129,6 +134,12 @@ class Hole:
 
         while not landed:
 
+            drag = 0.95 ** dt
+
+            vx *= drag
+            vy *= drag
+            vz *= drag
+
             x += vx * dt
             y += vy * dt
             z += vz * dt
@@ -150,57 +161,68 @@ class Hole:
         
         horizontal_speed = np.sqrt(vx**2 + vy**2)
 
+        h = self.get_height(x, y)
+        hx1 = self.get_height(max(x - 1, 0), y)
+        hx2 = self.get_height(min(x + 1, self.cols - 1), y)
+        hy1 = self.get_height(x, max(y - 1, 0))
+        hy2 = self.get_height(x, min(y + 1, self.rows - 1))
+
+        slope_x = (hx2 - hx1) / 2.0
+        slope_y = (hy2 - hy1) / 2.0
+
+        normal = np.array([-slope_x, -slope_y, 1.0])
+        normal /= np.linalg.norm(normal)
+
+
+        velocity = np.array([vx, vy, vz])
+        impact_speed = np.linalg.norm(velocity)
+
+        if impact_speed > 0:
+            
+            velocity /= impact_speed
+
+            impact_cos = np.clip(np.dot(-velocity, normal), 0.0, 1.0)
+
+            tangent_factor = np.sqrt(1.0 - impact_cos)
+
+            roll_speed = horizontal_speed * 0.15 * tangent_factor
+        else:
+            roll_speed = 0.0
+
         if horizontal_speed > 0:
 
-            roll_vx = vx * 0.15
-            roll_vy = vy * 0.15
+            while roll_speed > 0.1:
 
-            while True:
-                
-                if x < 0 or x >= self.cols or y < 0 or y >= self.rows:
-                    break
+                h = self.get_height(x, y)
+                hx1 = self.get_height(max(x - 1, 0), y)
+                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
+                hy1 = self.get_height(x, max(y - 1, 0))
+                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
+
+                slope_x = (hx2 - hx1) / 2
+                slope_y = (hy2 - hy1) / 2
+
+                x += (vx / horizontal_speed) * roll_speed * dt
+                y += (vy / horizontal_speed) * roll_speed * dt
+
+                x -= slope_x * 0.5
+                y -= slope_y * 0.5
 
                 surface = self.get_surface(x, y)
 
                 if surface == "out":
                     return np.array([x, y, z]), trajectory, False
 
-                hx1 = self.get_height(max(x - 1, 0), y)
-                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
-                hy1 = self.get_height(x, max(y - 1, 0))
-                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
-
-                slope_x = (hx2 - hx1) / 2.0
-                slope_y = (hy2 - hy1) / 2.0
-
-                roll_vx -= slope_x * gravity * dt
-                roll_vy -= slope_y * gravity * dt
-
-                if surface == "green":
-                    friction = 0.995
-                elif surface == "fairway":
-                    friction = 0.985
-                elif surface == "rough":
-                    friction = 0.975
-                elif surface == "bunker":
-                    friction = 0.90
-                else:
-                    friction = 0.985
-
-                roll_vx *= friction
-                roll_vy *= friction
-
-                x += roll_vx * dt
-                y += roll_vy * dt
-
+                if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
+                    break
+            
                 z = self.get_height(x, y)
 
                 trajectory.append([x, y, z])
 
-                roll_speed = np.sqrt(roll_vx**2 + roll_vy**2)
+                roll_speed *= 0.95
 
-                if roll_speed < 0.1:
-                    break
+        surface = self.get_surface(x, y)
 
         return np.array([x, y, z]), trajectory, True
 

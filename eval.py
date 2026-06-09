@@ -132,5 +132,5 @@ class Eval(FloatProblem):
 if __name__ == "__main__":
 
     hole = Hole("heightmap.png", "surfacemap.png")
-
-    hole.show_shot(hole.tee_position, power=100, direction=266, club_index=0)
+	
+    hole.show_shot(hole.tee_position, power=100, direction=269, club_index=14)

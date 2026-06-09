@@ -14,5 +14,5 @@ objectives=1
 trace=0
 
 //Hole Info
-heightmap=flatheightmap.png
-surfacemap=flatsurfacemap.png
+heightmap=heightmap.png
+surfacemap=surfacemap.png
