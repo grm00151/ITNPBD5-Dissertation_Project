@@ -1,6 +1,6 @@
 // General configuration
 // Task could be GA,NSGA2,test
-task=NSGA2
+task=GA
 
 maxShots=5
 
@@ -10,9 +10,9 @@ upperBounds=100,360,15
 // EA Parameters
 popSize=50
 generations=100
-objectives=2
+objectives=1
 trace=0
 
 //Hole Info
-heightmap=heightmap.png
-surfacemap=surfacemap.png
+heightmap=images/heightmap.png
+surfacemap=images/surfacemap.png
