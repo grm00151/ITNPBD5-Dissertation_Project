@@ -291,7 +291,7 @@ class Hole:
         path = pv.lines_from_points(np.array(trajectory)) 
         
         plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name) 
-        
+
         plotter.add_legend()
         plotter.show()
 
