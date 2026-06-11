@@ -26,6 +26,7 @@ class Eval(FloatProblem):
 		
 		# What are the names for the objectives
 		self.obj_labels = ['Distance']
+		self.obj_labels = ['Strokes']
 
 
 	def name(self) -> str:
@@ -75,7 +76,7 @@ class Eval(FloatProblem):
 		position = np.copy(self.course.tee_position)
 		
 		HOLE_RADIUS = 1.0
-		shots_taken = 0
+		strokes = 0
 		
 		for i in range(0, len(variables), 3):
 			
@@ -90,18 +91,18 @@ class Eval(FloatProblem):
 			if not valid:
 				return (1e6, 1e6)
 
-			shots_taken += 1
+			strokes += 1
 			
 			distance = np.linalg.norm(position - self.course.hole_position)
 			
 			# Hole reached
 			if distance <= HOLE_RADIUS:
-				return 0.0, shots_taken
+				return 0.0, strokes
 			
 		# Hole not reached
 		final_distance = np.linalg.norm(position - self.course.hole_position)
 			
-		return final_distance, shots_taken
+		return final_distance, strokes
 
 	# evaluate is called by the code in solver.py but you only need to edit
 	# code in here and try out different fitness functions.
@@ -118,13 +119,13 @@ class Eval(FloatProblem):
 		# solution.objectives[0] = 8 - self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalGolfStrategyGA(solution.variables)
-		distance, shots = self.evalGolfStrategy(solution.variables)
+		distance, strokes = self.evalGolfStrategy(solution.variables)
 		
 		if (len(solution.objectives) > 1):
 			solution.objectives[0] = distance
-			solution.objectives[1] = shots
+			solution.objectives[1] = strokes
 		else:
-			solution.objectives[0] = distance + (shots * 20)
+			solution.objectives[0] = distance + (strokes * 20)
 
 		return solution
 

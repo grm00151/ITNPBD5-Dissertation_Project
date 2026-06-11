@@ -107,32 +107,39 @@ class Hole:
         
         return self.heightmap[y, x]
     
-    def simulate_shot(self, start_position, power, direction, club_index):
+    def get_allowed_club(self, position, club_index):
+        
+        surface = self.get_surface(position[0], position[1])
+
+        if surface == "bunker":
+            return next(i for i, club in enumerate(self.clubs) if club.name == "Sand Wedge")
+        
+        if surface == "green":
+            return next(i for i, club in enumerate(self.clubs) if club.name == "Putter")
+        
+        return club_index
+    
+    def simulate_flight(self, start_position, club, power, direction):
 
         gravity = 10.73
         dt = 0.05
 
-        club = self.clubs[int(club_index)]
-
         speed = club.ball_speed * 0.48889 * (power / 100.0)
 
         launch_angle = np.radians(club.launch_angle)
-
         direction_angle = np.radians(direction)
 
         x = start_position[0]
         y = start_position[1]
         z = self.get_height(x, y)
 
-        trajectory = []
-
         vx = speed * np.cos(launch_angle) * np.cos(direction_angle)
         vy = speed * np.cos(launch_angle) * np.sin(direction_angle)
         vz = speed * np.sin(launch_angle)
 
-        landed = False
+        trajectory = []
 
-        while not landed:
+        while True:
 
             drag = 0.95 ** dt
 
@@ -148,22 +155,23 @@ class Hole:
 
             trajectory.append([x, y, z])
 
-            if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
+            if x < 0 or x >= self.cols or y < 0 or y >= self.rows:
                 break
 
             terrain = self.get_height(x, y)
 
-            if vz <= -0 and z <= terrain:
+            if vz <= 0 and z <= terrain:
                 z = terrain
-                surface = self.get_surface(x, y)
                 trajectory.append([x, y, z])
-                landed = True
-        
-        horizontal_speed = np.sqrt(vx**2 + vy**2)
+                break
 
-        h = self.get_height(x, y)
+        return x, y, z, vx, vy, vz, trajectory
+    
+    def get_surface_geometry(self, x, y):
+
         hx1 = self.get_height(max(x - 1, 0), y)
         hx2 = self.get_height(min(x + 1, self.cols - 1), y)
+
         hy1 = self.get_height(x, max(y - 1, 0))
         hy2 = self.get_height(x, min(y + 1, self.rows - 1))
 
@@ -173,56 +181,79 @@ class Hole:
         normal = np.array([-slope_x, -slope_y, 1.0])
         normal /= np.linalg.norm(normal)
 
+        return normal, slope_x, slope_y
+    
+    def calculate_roll_speed(self, x, y, vx, vy, vz):
+
+        horizontal_speed = np.hypot(vx, vy)
+
+        if horizontal_speed == 0:
+            return 0.0
+
+        normal, _, _ = self.get_surface_geometry(x, y)
 
         velocity = np.array([vx, vy, vz])
         impact_speed = np.linalg.norm(velocity)
 
-        if impact_speed > 0:
-            
-            velocity /= impact_speed
+        if impact_speed == 0:
+            return 0.0
 
-            impact_cos = np.clip(np.dot(-velocity, normal), 0.0, 1.0)
+        velocity /= impact_speed
 
-            tangent_factor = np.sqrt(1.0 - impact_cos)
+        impact_cos = np.clip(np.dot(-velocity, normal), 0.0, 1.0)
 
-            roll_speed = horizontal_speed * 0.15 * tangent_factor
-        else:
-            roll_speed = 0.0
+        tangent_factor = np.sqrt(1.0 - impact_cos)
 
-        if horizontal_speed > 0:
+        return horizontal_speed * 0.15 * tangent_factor
+    
+    def simulate_roll(self, x, y, z, vx, vy, roll_speed, trajectory):
 
-            while roll_speed > 0.1:
+        dt = 0.05
 
-                h = self.get_height(x, y)
-                hx1 = self.get_height(max(x - 1, 0), y)
-                hx2 = self.get_height(min(x + 1, self.cols - 1), y)
-                hy1 = self.get_height(x, max(y - 1, 0))
-                hy2 = self.get_height(x, min(y + 1, self.rows - 1))
+        horizontal_speed = np.hypot(vx, vy)
 
-                slope_x = (hx2 - hx1) / 2
-                slope_y = (hy2 - hy1) / 2
+        if horizontal_speed == 0:
+            return True, x, y, z
 
-                x += (vx / horizontal_speed) * roll_speed * dt
-                y += (vy / horizontal_speed) * roll_speed * dt
+        while roll_speed > 0.1:
 
-                x -= slope_x * 0.5
-                y -= slope_y * 0.5
+            _, slope_x, slope_y = self.get_surface_geometry(x, y)
 
-                surface = self.get_surface(x, y)
+            x += (vx / horizontal_speed) * roll_speed * dt
+            y += (vy / horizontal_speed) * roll_speed * dt
 
-                if surface == "out":
-                    return np.array([x, y, z]), trajectory, False
+            x -= slope_x * 0.5
+            y -= slope_y * 0.5
 
-                if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
-                    break
-            
-                z = self.get_height(x, y)
+            if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
+                break
 
-                trajectory.append([x, y, z])
+            surface = self.get_surface(x, y)
 
-                roll_speed *= 0.95
+            if surface == "out":
+                return False, x, y, z
 
-        surface = self.get_surface(x, y)
+            z = self.get_height(x, y)
+
+            trajectory.append([x, y, z])
+
+            roll_speed *= 0.95
+
+        return True, x, y, z
+    
+    def simulate_shot(self, start_position, power, direction, club_index):
+        
+        club_index = self.get_allowed_club(start_position, club_index)
+        club = self.clubs[int(club_index)]
+
+        x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction)
+
+        roll_speed = self.calculate_roll_speed(x, y, vx, vy, vz)
+
+        out_of_bounds, x, y, z = self.simulate_roll(x, y, z, vx, vy, roll_speed, trajectory)
+
+        if not out_of_bounds:
+            return np.array([x, y, z]), trajectory, False
 
         return np.array([x, y, z]), trajectory, True
 
