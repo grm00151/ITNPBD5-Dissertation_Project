@@ -1,4 +1,3 @@
-
 import sys
 import io
 import timeit
@@ -125,8 +124,6 @@ class Solver:
 			first = False
 		print("\t,%.2f" % (runtime),flush=True)
 
-		
-			
 	def solveGA(self,problem):
 		max_eval = int(self.prm['maxEval'])
 		pbar = tqdm(total=max_eval, desc="GA", unit="eval")
@@ -162,8 +159,6 @@ class Solver:
 		# Uncomment the following line to show the best solution
 		score = original_evaluate(results)
 		eprint("Score: %.2f" % (results.objectives[0]))
-
-			
 				
 	def solveNSGA2(self,problem):
 		max_eval = int(self.prm['maxEval'])
@@ -204,7 +199,6 @@ class Solver:
 		for p in front:
 			self.logResults(problem,p.objectives,p,toc - tic)
 		print()
-
 
 	def test(self,problem,testvalues: FloatSolution):
 		problem.trace = True

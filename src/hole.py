@@ -78,11 +78,11 @@ class Hole:
         colour = tuple(self.surfacemap[y, x])
 
         surfaces = {
-            (102,205,102): "fairway",
-            (34,139,34): "rough",
-            (50,205,50): "green",
-            (237,201,175): "bunker",
-            (254,255,255): "out"
+            (173,209,158): "fairway",
+            (149,184,136): "rough",
+            (205,235,176): "green",
+            (245,234,198): "bunker",
+            (113,149,101): "out"
         }
 
         return surfaces.get(colour, "unknown")
@@ -275,7 +275,9 @@ class Hole:
 
     def show_shot(self, start_position, power, direction, club_index):
         
-        _, trajectory, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        position, trajectory, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        
+        print(self.get_surface(position[0], position[1]))
         
         plotter = pv.Plotter() 
 
