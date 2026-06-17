@@ -4,7 +4,7 @@ import sys
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
-from hole import Hole
+from hole import Hole, Player
 
 def eprint(*args, **kwargs):
 	print(*args,file=sys.stderr,**kwargs)
@@ -131,7 +131,9 @@ class Eval(FloatProblem):
 
 # Test the function
 if __name__ == "__main__":
+	
+    player = Player(14.5)
 
-    hole = Hole("images/heightmap.png", "images/surfacemap.png")
+    hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 
     hole.show_shot(hole.tee_position, power=100, direction=269, club_index=0)
