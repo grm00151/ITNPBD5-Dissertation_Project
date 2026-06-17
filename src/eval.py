@@ -11,7 +11,7 @@ def eprint(*args, **kwargs):
 
 class Eval(FloatProblem):
 
-	def __init__(self,obj,lowerBounds,upperBounds, course):
+	def __init__(self,obj,lowerBounds,upperBounds, hole):
 		super(Eval, self).__init__()
 		
 		# Take a note of the upper and lower allowable values for the thresholds		
@@ -22,7 +22,7 @@ class Eval(FloatProblem):
 		self.objectives = obj
 		self.constraints = 0
 
-		self.course = course
+		self.hole = hole
 		
 		# What are the names for the objectives
 		self.obj_labels = ['Distance']
@@ -73,7 +73,7 @@ class Eval(FloatProblem):
 	
 	def evalGolfStrategy(self, variables):
 		
-		position = np.copy(self.course.tee_position)
+		position = np.copy(self.hole.tee_position)
 		
 		HOLE_RADIUS = 1.0
 		strokes = 0
@@ -84,23 +84,23 @@ class Eval(FloatProblem):
 			direction = variables[i + 1]
 			
 			club = int(round(variables[i + 2]))
-			club = np.clip(club, 0, len(self.course.clubs) - 1)
+			club = np.clip(club, 0, len(self.hole.player.clubs) - 1)
 			
-			position, _, valid= self.course.simulate_shot(position, power, direction, club)
+			position, _, valid= self.hole.simulate_shot(position, power, direction, club)
 
 			if not valid:
 				return (1e6, 1e6)
 
 			strokes += 1
 			
-			distance = np.linalg.norm(position - self.course.hole_position)
+			distance = np.linalg.norm(position - self.hole.hole_position)
 			
 			# Hole reached
 			if distance <= HOLE_RADIUS:
 				return 0.0, strokes
 			
 		# Hole not reached
-		final_distance = np.linalg.norm(position - self.course.hole_position)
+		final_distance = np.linalg.norm(position - self.hole.hole_position)
 			
 		return final_distance, strokes
 

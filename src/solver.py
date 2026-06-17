@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 
 from eval import Eval
-from hole import Hole
+from hole import Player, Hole
 
 def eprint(*args, **kwargs):
 	print(*args,file=sys.stderr,**kwargs)
@@ -149,7 +149,7 @@ class Solver:
 			pbar.close()
 		toc = timeit.default_timer()
 		results = algorithm.result()
-		problem.course.show_strategy(results.variables)
+		problem.hole.show_strategy(results.variables)
 		self.logResults(problem,results.objectives,results,toc - tic)
 		if self.tracing():
 			self.printResults(problem,algorithm,results,toc - tic)
@@ -188,7 +188,7 @@ class Solver:
 			pbar.close()
 		front = algorithm.result()
 		best = min(front, key=lambda s: (s.objectives[0], s.objectives[1])) 
-		problem.course.show_strategy(best.variables)
+		problem.hole.show_strategy(best.variables)
 		# Save results to file
 		#print_function_values_to_file(front, 'FUN.' + algorithm.label + ".txt")
 		#print_variables_to_file(front, 'VAR.'+ algorithm.label + ".txt")
@@ -226,21 +226,19 @@ class Solver:
 
 		maxShots = int(self.prm['maxShots'])
 
-		self.prm['lowerBounds'] = self.prm['lowerBounds'] * maxShots
-		self.prm['upperBounds'] = self.prm['upperBounds'] * maxShots
+		lowerBounds = self.prm['lowerBounds'] * maxShots
+		upperBounds = self.prm['upperBounds'] * maxShots
 
 		print("Variables:", len(self.prm['lowerBounds']))
+
+		handicap = self.prm['handicap']
+		player = Player(handicap)
 		
 		heightmap = self.prm["heightmap"]
 		surfacemap = self.prm["surfacemap"]
-		hole = Hole(heightmap, surfacemap)
+		hole = Hole(player, heightmap, surfacemap)
 
-		problem = Eval(
-			self.prm['objectives'],
-			self.prm['lowerBounds'],
-			self.prm['upperBounds'],
-			hole
-			)
+		problem = Eval(self.prm['objectives'], lowerBounds, upperBounds, hole)
 			
 		# What's our task?
 		task = self.prm['task']
@@ -252,7 +250,7 @@ class Solver:
 		# Now carry out the task	
 		if (task == "test"): self.test(problem,[1, 0, 0, 0])
 		if (task == "GA"): self.solveGA(problem)
-		if (task == "NSGA2"): self.solveNSGA2(problem)		
+		if (task == "NSGA2"): self.solveNSGA2(problem)
 
 if __name__ == "__main__":
 	logging.disable()

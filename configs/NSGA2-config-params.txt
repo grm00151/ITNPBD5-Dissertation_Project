@@ -5,7 +5,7 @@ task=NSGA2
 maxShots=5
 
 lowerBounds=0,0,0
-upperBounds=100,360,15
+upperBounds=100,360,13
 
 // EA Parameters
 popSize=50
@@ -13,6 +13,9 @@ generations=100
 objectives=2
 trace=0
 
-//Hole Info
+// Hole Info
 heightmap=images/heightmap.png
 surfacemap=images/surfacemap.png
+
+// Player Info 
+handicap = 14.5

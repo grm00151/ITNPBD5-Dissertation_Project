@@ -1,2 +1,4 @@
 https://www.trackman.com/blog/golf/ball-speed
 https://www.trackman.com/blog/golf/launch-angle
+https://www.trackman.com/blog/golf/spin-rate
+https://www.trackman.com/blog/golf/spin-axis

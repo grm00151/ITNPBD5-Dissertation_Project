@@ -4,52 +4,56 @@ from PIL import Image
 
 class Club:
 
-    def __init__(self, name, launch_angle, ball_speed, colour):
+    def __init__(self, name, launch_angle, ball_speed, spin_rate, colour):
 
         self.name = name
         self.launch_angle = launch_angle
         self.ball_speed = ball_speed
+        self.spin_rate = spin_rate
         self.colour = colour
+
+class Player:
+
+    def __init__(self, handicap):
+
+        self.handicap = handicap
+        self.clubs = [
+            Club("Driver", 12.6, 133, 3275, "red"),
+            Club("3 Wood", 11.5, 125, 3700, "orangered"),
+            Club("5 Wood", 13.0, 120, 4200, "orange"),
+            Club("4 Hybrid", 15.0, 112, 5000, "limegreen"),
+            Club("5 Iron", 14.0, 104, 5300, "blue"),
+            Club("6 Iron", 15.5, 100, 5800, "mediumblue"),
+            Club("7 Iron", 17.0, 96, 6400, "royalblue"),
+            Club("8 Iron", 19.0, 92, 7100, "navy"),
+            Club("9 Iron", 21.0, 88, 8000, "skyblue"),
+            Club("Pitching Wedge", 24.0, 83, 9000, "magenta"),
+            Club("Gap Wedge", 27.0, 79, 10000, "violet"),
+            Club("Sand Wedge", 30.0, 74, 10800, "orchid"),
+            Club("Lob Wedge", 33.0, 69, 11500, "purple"),
+            Club("Putter", 3.0, 15, 0, "white")
+        ]
 
 class Hole:
 
-    def __init__(self, heightmap_path, surfacemap_path):
+    def __init__(self, player, heightmap_path, surfacemap_path):
+
+        self.player = player
 
         self.heightmap = self.load_heightmap(heightmap_path)
-
         self.surfacemap = self.load_surfacemap(surfacemap_path)
 
         self.rows, self.cols = self.heightmap.shape
 
         self.create_mesh()
 
-        #Hole 3 - Towers
-        self.tee_position = np.array([316,570, 37])
-        self.hole_position = np.array([384, 117, 21])
-
-        #Flat
+        # Hole 1 - Flat
         #self.tee_position = np.array([320,570, 37])
         #self.hole_position = np.array([320, 111, 21])
 
-        #Typical carry distance for an average male amateur golfer
-        self.clubs = [
-            Club("Driver", 12.6, 133, "red"),
-            Club("3 Wood", 11.5, 125, "orangered"),
-            Club("5 Wood", 13.0, 120, "orange"),
-            Club("3 Hybrid", 14.0, 116, "lime"),
-            Club("4 Hybrid", 15.0, 112, "limegreen"),
-            Club("4 Iron", 13.0, 108, "dodgerblue"),
-            Club("5 Iron", 14.0, 104, "blue"),
-            Club("6 Iron", 15.5, 100, "mediumblue"),
-            Club("7 Iron", 17.0, 96, "royalblue"),
-            Club("8 Iron", 19.0, 92, "navy"),
-            Club("9 Iron", 21.0, 88, "skyblue"),
-            Club("Pitching Wedge", 24.0, 83, "magenta"),
-            Club("Gap Wedge", 27.0, 79, "violet"),
-            Club("Sand Wedge", 30.0, 74, "orchid"),
-            Club("Lob Wedge", 33.0, 69, "purple"),
-            Club("Putter", 3.0, 15, "white")
-        ]
+        # Hole 2 - Towers
+        self.tee_position = np.array([316,570, 37])
+        self.hole_position = np.array([384, 117, 21])
 
     def load_heightmap(self, path):
 
@@ -112,10 +116,10 @@ class Hole:
         surface = self.get_surface(position[0], position[1])
 
         if surface == "bunker":
-            return next(i for i, club in enumerate(self.clubs) if club.name == "Sand Wedge")
+            return next(i for i, club in enumerate(self.player.clubs) if club.name == "Sand Wedge")
         
         if surface == "green":
-            return next(i for i, club in enumerate(self.clubs) if club.name == "Putter")
+            return next(i for i, club in enumerate(self.player.clubs) if club.name == "Putter")
         
         return club_index
     
@@ -244,7 +248,7 @@ class Hole:
     def simulate_shot(self, start_position, power, direction, club_index):
         
         club_index = self.get_allowed_club(start_position, club_index)
-        club = self.clubs[int(club_index)]
+        club = self.player.clubs[int(club_index)]
 
         x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction)
 
@@ -288,7 +292,7 @@ class Hole:
         
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
-        club = self.clubs[club_index]
+        club = self.player.clubs[club_index]
         
         path = pv.lines_from_points(np.array(trajectory)) 
         
@@ -316,11 +320,11 @@ class Hole:
             direction = variables[i + 1]
 
             club_index = int(round(variables[i + 2]))
-            club_index = np.clip(club_index, 0, len(self.clubs) - 1)
+            club_index = np.clip(club_index, 0, len(self.player.clubs) - 1)
 
             position, trajectory, _ = self.simulate_shot(position, power, direction, club_index)
 
-            club = self.clubs[club_index]
+            club = self.player.clubs[club_index]
 
             path = pv.lines_from_points(np.array(trajectory))
 
