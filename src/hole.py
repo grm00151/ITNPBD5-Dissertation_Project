@@ -98,11 +98,7 @@ class Hole:
 
         xx, yy = np.meshgrid(x, y)
 
-        self.grid = pv.StructuredGrid(
-            xx,
-            yy,
-            self.heightmap
-        )
+        self.grid = pv.StructuredGrid(xx, yy, self.heightmap)
 
     def get_height(self, x, y):
         
@@ -257,9 +253,9 @@ class Hole:
         out_of_bounds, x, y, z = self.simulate_roll(x, y, z, vx, vy, roll_speed, trajectory)
 
         if not out_of_bounds:
-            return np.array([x, y, z]), trajectory, False
+            return np.array([x, y, z]), trajectory, False, club_index
 
-        return np.array([x, y, z]), trajectory, True
+        return np.array([x, y, z]), trajectory, True, club_index
 
     def show(self):
 
@@ -279,7 +275,7 @@ class Hole:
 
     def show_shot(self, start_position, power, direction, club_index):
         
-        position, trajectory, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index) 
         
         print(self.get_surface(position[0], position[1]))
         
@@ -322,7 +318,7 @@ class Hole:
             club_index = int(round(variables[i + 2]))
             club_index = np.clip(club_index, 0, len(self.player.clubs) - 1)
 
-            position, trajectory, _ = self.simulate_shot(position, power, direction, club_index)
+            position, trajectory, _, club_index = self.simulate_shot(position, power, direction, club_index)
 
             club = self.player.clubs[club_index]
 

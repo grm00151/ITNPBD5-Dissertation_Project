@@ -229,8 +229,6 @@ class Solver:
 		lowerBounds = self.prm['lowerBounds'] * maxShots
 		upperBounds = self.prm['upperBounds'] * maxShots
 
-		print("Variables:", len(self.prm['lowerBounds']))
-
 		handicap = self.prm['handicap']
 		player = Player(handicap)
 		
