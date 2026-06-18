@@ -147,11 +147,16 @@ class Hole:
             vy *= drag
             vz *= drag
 
+            spin_factor = club.spin_rate / 10000.0
+            speed_mag = np.sqrt(vx**2 + vy**2 + vz**2)
+
+            lift_accel = spin_factor * speed_mag * 0.02
+
+            vz += (lift_accel - gravity) * dt
+
             x += vx * dt
             y += vy * dt
-            z += vz * dt
-
-            vz -= gravity * dt
+            z += vz * dt            
 
             trajectory.append([x, y, z])
 
