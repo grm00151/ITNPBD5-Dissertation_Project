@@ -227,8 +227,8 @@ class Hole:
             x += (vx / horizontal_speed) * roll_speed * dt
             y += (vy / horizontal_speed) * roll_speed * dt
 
-            x -= slope_x * 0.5
-            y -= slope_y * 0.5
+            x -= slope_x * 0.05
+            y -= slope_y * 0.05
 
             if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
                 break
@@ -237,12 +237,20 @@ class Hole:
 
             if surface == "out":
                 return False, x, y, z
+            elif surface == "fairway":
+                friction = 0.97
+            elif surface == "rough":
+                friction = 0.95
+            elif surface == "green":
+                friction = 0.98
+            else:
+                friction = 0.96
 
             z = self.get_height(x, y)
 
             trajectory.append([x, y, z])
 
-            roll_speed *= 0.95
+            roll_speed *= friction
 
         return True, x, y, z
     
@@ -297,7 +305,7 @@ class Hole:
         
         path = pv.lines_from_points(np.array(trajectory)) 
         
-        plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name) 
+        plotter.add_mesh(path, color=club.colour, line_width=3, label=club.name) 
 
         plotter.add_legend()
         plotter.show()
@@ -315,6 +323,8 @@ class Hole:
 
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
+        legend_clubs = set()
+
         for i in range(0, len(variables), 3):
 
             power = variables[i]
@@ -329,7 +339,10 @@ class Hole:
 
             path = pv.lines_from_points(np.array(trajectory))
 
-            plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name)
+            if club.name not in legend_clubs:
+                plotter.add_mesh(path, color=club.colour, line_width=3, label=club.name)
+            else:
+                plotter.add_mesh(path, color=club.colour, line_width=3)
         
         plotter.add_legend()
         plotter.show()
