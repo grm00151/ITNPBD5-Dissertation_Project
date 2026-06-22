@@ -119,7 +119,7 @@ class Hole:
         
         return club_index
     
-    def simulate_flight(self, start_position, club, power, direction, spin_axis):
+    def simulate_flight(self, start_position, club, power, direction):
 
         gravity = 10.73
         dt = 0.05
@@ -139,6 +139,11 @@ class Hole:
 
         trajectory = []
 
+        if self.player.handicap > 1:
+            spin_axis = 0
+        else:
+            spin_axis = 0
+
         while True:
 
             drag = 0.95 ** dt
@@ -152,7 +157,7 @@ class Hole:
 
             curve = np.sin(np.radians(spin_axis))
 
-            side_accel = curve * spin_factor * speed_mag * 1.0
+            side_accel = curve * spin_factor * speed_mag
 
             horizontal_speed = np.hypot(vx, vy)
 
@@ -160,7 +165,7 @@ class Hole:
                 vx += (-vy / horizontal_speed) * side_accel * dt
                 vy += (vx / horizontal_speed) * side_accel * dt
 
-            lift_accel = np.cos(np.radians(spin_axis)) * spin_factor * speed_mag * 0.02
+            lift_accel = np.cos(np.radians(spin_axis)) * spin_factor * speed_mag * dt
 
             vz += (lift_accel - gravity) * dt
 
@@ -264,12 +269,12 @@ class Hole:
 
         return True, x, y, z
     
-    def simulate_shot(self, start_position, power, direction, club_index, spin_axis):
+    def simulate_shot(self, start_position, power, direction, club_index):
         
         club_index = self.get_allowed_club(start_position, club_index)
         club = self.player.clubs[int(club_index)]
 
-        x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction, spin_axis)
+        x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction)
 
         roll_speed = self.calculate_roll_speed(x, y, vx, vy, vz)
 
@@ -296,9 +301,9 @@ class Hole:
 
         plotter.show()
 
-    def show_shot(self, start_position, power, direction, club_index, spin_axis):
+    def show_shot(self, start_position, power, direction, club_index):
         
-        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index, spin_axis) 
+        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index) 
         
         print(self.get_surface(position[0], position[1]))
         
