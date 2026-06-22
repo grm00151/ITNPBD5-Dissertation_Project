@@ -85,11 +85,8 @@ class Eval(FloatProblem):
 			
 			club = int(round(variables[i + 2]))
 			club = np.clip(club, 0, len(self.hole.player.clubs) - 1)
-
-			if self.player.handicap > 1:
-				spin_axis = 0
 			
-			position, _, valid, _= self.hole.simulate_shot(position, power, direction, club, spin_axis)
+			position, _, valid, _= self.hole.simulate_shot(position, power, direction, club)
 
 			if not valid:
 				return (1e6, 1e6)
