@@ -85,8 +85,11 @@ class Eval(FloatProblem):
 			
 			club = int(round(variables[i + 2]))
 			club = np.clip(club, 0, len(self.hole.player.clubs) - 1)
+
+			if self.player.handicap > 1:
+				spin_axis = 0
 			
-			position, _, valid, _= self.hole.simulate_shot(position, power, direction, club)
+			position, _, valid, _= self.hole.simulate_shot(position, power, direction, club, spin_axis)
 
 			if not valid:
 				return (1e6, 1e6)
@@ -136,4 +139,4 @@ if __name__ == "__main__":
 
     hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 
-    hole.show_shot(hole.tee_position, power=100, direction=250, club_index=2)
+    hole.show_shot(hole.tee_position, power=100, direction=269, club_index=0, spin_axis=-45)

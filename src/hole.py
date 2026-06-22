@@ -119,7 +119,7 @@ class Hole:
         
         return club_index
     
-    def simulate_flight(self, start_position, club, power, direction):
+    def simulate_flight(self, start_position, club, power, direction, spin_axis):
 
         gravity = 10.73
         dt = 0.05
@@ -147,10 +147,20 @@ class Hole:
             vy *= drag
             vz *= drag
 
-            spin_factor = club.spin_rate / 10000.0
             speed_mag = np.sqrt(vx**2 + vy**2 + vz**2)
+            spin_factor = club.spin_rate / 10000.0
 
-            lift_accel = spin_factor * speed_mag * 0.02
+            curve = np.sin(np.radians(spin_axis))
+
+            side_accel = curve * spin_factor * speed_mag * 1.0
+
+            horizontal_speed = np.hypot(vx, vy)
+
+            if horizontal_speed > 0:
+                vx += (-vy / horizontal_speed) * side_accel * dt
+                vy += (vx / horizontal_speed) * side_accel * dt
+
+            lift_accel = np.cos(np.radians(spin_axis)) * spin_factor * speed_mag * 0.02
 
             vz += (lift_accel - gravity) * dt
 
@@ -254,12 +264,12 @@ class Hole:
 
         return True, x, y, z
     
-    def simulate_shot(self, start_position, power, direction, club_index):
+    def simulate_shot(self, start_position, power, direction, club_index, spin_axis):
         
         club_index = self.get_allowed_club(start_position, club_index)
         club = self.player.clubs[int(club_index)]
 
-        x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction)
+        x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction, spin_axis)
 
         roll_speed = self.calculate_roll_speed(x, y, vx, vy, vz)
 
@@ -286,9 +296,9 @@ class Hole:
 
         plotter.show()
 
-    def show_shot(self, start_position, power, direction, club_index):
+    def show_shot(self, start_position, power, direction, club_index, spin_axis):
         
-        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index, spin_axis) 
         
         print(self.get_surface(position[0], position[1]))
         
@@ -341,6 +351,7 @@ class Hole:
 
             if club.name not in legend_clubs:
                 plotter.add_mesh(path, color=club.colour, line_width=3, label=club.name)
+                legend_clubs.add(club.name)
             else:
                 plotter.add_mesh(path, color=club.colour, line_width=3)
         
