@@ -25,8 +25,7 @@ class Eval(FloatProblem):
 		self.hole = hole
 		
 		# What are the names for the objectives
-		self.obj_labels = ['Distance']
-		self.obj_labels = ['Strokes']
+		self.obj_labels = ['Distance', 'Strokes']
 
 
 	def name(self) -> str:
@@ -86,9 +85,9 @@ class Eval(FloatProblem):
 			club = int(round(variables[i + 2]))
 			club = np.clip(club, 0, len(self.hole.player.clubs) - 1)
 			
-			position, _, valid, _= self.hole.simulate_shot(position, power, direction, club)
+			position, _, out_of_bounds, _= self.hole.simulate_shot(position, power, direction, club)
 
-			if not valid:
+			if not out_of_bounds:
 				return (1e6, 1e6)
 
 			strokes += 1
@@ -132,7 +131,7 @@ class Eval(FloatProblem):
 # Test the function
 if __name__ == "__main__":
 	
-    player = Player(14.5)
+    player = Player(-54)
 
     hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 

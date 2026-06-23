@@ -1,5 +1,6 @@
 import numpy as np
 import pyvista as pv
+import random
 from PIL import Image
 
 class Club:
@@ -124,9 +125,21 @@ class Hole:
         gravity = 10.73
         dt = 0.05
 
-        speed = club.ball_speed * 0.48889 * (power / 100.0)
+        handicap_norm = 1 - (self.player.handicap + 54) / 62
 
-        launch_angle = np.radians(club.launch_angle)
+        spin_axis = random.uniform(-45 * handicap_norm, 45 * handicap_norm)
+
+        max_speed = club.ball_speed * 1.285
+        min_speed = max_speed * 0.2
+        speed_range = max_speed - min_speed
+
+        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 100.0)
+
+        max_launch = club.launch_angle * 0.825
+        min_launch = max_launch * 0.5
+        launch_range = max_launch - min_launch
+
+        launch_angle = np.radians((min_launch + (launch_range - (random.random() * launch_range * handicap_norm))))
         direction_angle = np.radians(direction)
 
         x = start_position[0]
@@ -138,11 +151,6 @@ class Hole:
         vz = speed * np.sin(launch_angle)
 
         trajectory = []
-
-        if self.player.handicap > 1:
-            spin_axis = 0
-        else:
-            spin_axis = 0
 
         while True:
 
@@ -253,13 +261,13 @@ class Hole:
             if surface == "out":
                 return False, x, y, z
             elif surface == "fairway":
-                friction = 0.97
-            elif surface == "rough":
-                friction = 0.95
-            elif surface == "green":
-                friction = 0.98
-            else:
                 friction = 0.96
+            elif surface == "rough":
+                friction = 0.94
+            elif surface == "green":
+                friction = 0.97
+            else:
+                friction = 0.95
 
             z = self.get_height(x, y)
 

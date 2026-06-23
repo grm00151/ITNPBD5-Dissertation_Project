@@ -229,7 +229,7 @@ class Solver:
 		lowerBounds = self.prm['lowerBounds'] * maxShots
 		upperBounds = self.prm['upperBounds'] * maxShots
 
-		handicap = self.prm['handicap']
+		handicap = float(self.prm['handicap'])
 		player = Player(handicap)
 		
 		heightmap = self.prm["heightmap"]
