@@ -136,7 +136,12 @@ class Hole:
         else:
             max_axis = 15
 
-        spin_axis = random.uniform(-max_axis * handicap_norm, max_axis * handicap_norm)
+        std_dev = (max_axis * handicap_norm) / 3
+
+        while True:
+            spin_axis = random.gauss(0, std_dev)
+            if -max_axis <= spin_axis <= max_axis:
+                break
 
         max_speed = club.ball_speed
         min_speed = max_speed * 0.2
