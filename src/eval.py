@@ -134,5 +134,5 @@ if __name__ == "__main__":
 	player = Player(8)
 	
 	hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
-	hole.show()
-	hole.show_shot(hole.tee_position, power=100, direction=269, club_index=12)
+
+	hole.show_shot(hole.tee_position, power=100, direction=269, club_index=2)
