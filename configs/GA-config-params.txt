@@ -18,4 +18,4 @@ surfacemap=images/surfacemap.png
 // Player Info
 maxShots=5
 // handicap range 8 to -54
-handicap = -24
+handicap = 8

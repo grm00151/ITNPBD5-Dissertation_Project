@@ -19,20 +19,20 @@ class Player:
 
         self.handicap = handicap
         self.clubs = [
-            Club("Driver", 12.6, 133, 3275, "red"),
-            Club("3 Wood", 11.5, 125, 3700, "orangered"),
-            Club("5 Wood", 13.0, 120, 4200, "orange"),
-            Club("4 Hybrid", 15.0, 112, 5000, "limegreen"),
-            Club("5 Iron", 14.0, 104, 5300, "blue"),
-            Club("6 Iron", 15.5, 100, 5800, "mediumblue"),
-            Club("7 Iron", 17.0, 96, 6400, "royalblue"),
-            Club("8 Iron", 19.0, 92, 7100, "navy"),
-            Club("9 Iron", 21.0, 88, 8000, "skyblue"),
-            Club("Pitching Wedge", 24.0, 83, 9000, "magenta"),
-            Club("Gap Wedge", 27.0, 79, 10000, "violet"),
-            Club("Sand Wedge", 30.0, 74, 10800, "orchid"),
-            Club("Lob Wedge", 33.0, 69, 11500, "purple"),
-            Club("Putter", 3.0, 15, 0, "white")
+            Club("Driver", 12.0, 175.0, 2500, "red"),
+            Club("3 Wood", 11.0, 166.5, 3200, "orangered"),
+            Club("5 Wood", 12.5, 153.0, 3800, "orange"),
+            Club("4 Hybrid", 14.0, 141.0, 4500, "limegreen"),
+            Club("5 Iron", 15.0, 129.0, 5200, "blue"),
+            Club("6 Iron", 16.5, 121.0, 5800, "mediumblue"),
+            Club("7 Iron", 18.0, 114.0, 6500, "royalblue"),
+            Club("8 Iron", 20.0, 104.5, 7300, "navy"),
+            Club("9 Iron", 22.5, 96.0, 8300, "skyblue"),
+            Club("Pitching Wedge", 25.5, 86.5, 9400, "magenta"),
+            Club("Gap Wedge", 28.5, 79.5, 10300, "violet"),
+            Club("Sand Wedge", 31.5, 72.0, 11100, "orchid"),
+            Club("Lob Wedge", 35.0, 66.0, 11900, "purple"),
+            Club("Putter", 3.0, 15.0, 0, "grey")
         ]
 
 class Hole:
@@ -53,8 +53,8 @@ class Hole:
         #self.hole_position = np.array([320, 111, 21])
 
         # Hole 2 - Towers
-        self.tee_position = np.array([316,570, 37])
-        self.hole_position = np.array([384, 117, 21])
+        self.tee_position = np.array([316.0, 570.0, 59.39])
+        self.hole_position = np.array([384.0, 117.0, 46.65])
 
     def load_heightmap(self, path):
 
@@ -123,19 +123,19 @@ class Hole:
     def simulate_flight(self, start_position, club, power, direction):
 
         gravity = 10.73
-        dt = 0.05
+        dt = 0.01
 
         handicap_norm = 1 - (self.player.handicap + 54) / 62
 
         spin_axis = random.uniform(-45 * handicap_norm, 45 * handicap_norm)
 
-        max_speed = club.ball_speed * 1.285
+        max_speed = club.ball_speed
         min_speed = max_speed * 0.2
         speed_range = max_speed - min_speed
 
         speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 100.0)
 
-        max_launch = club.launch_angle * 0.825
+        max_launch = club.launch_angle
         min_launch = max_launch * 0.5
         launch_range = max_launch - min_launch
 
@@ -161,19 +161,22 @@ class Hole:
             vz *= drag
 
             speed_mag = np.sqrt(vx**2 + vy**2 + vz**2)
-            spin_factor = club.spin_rate / 10000.0
+
+            backspin_factor = club.spin_rate / 10000.0
 
             curve = np.sin(np.radians(spin_axis))
-
-            side_accel = curve * spin_factor * speed_mag
+            side_accel = curve * backspin_factor * speed_mag
 
             horizontal_speed = np.hypot(vx, vy)
 
             if horizontal_speed > 0:
-                vx += (-vy / horizontal_speed) * side_accel * dt
-                vy += (vx / horizontal_speed) * side_accel * dt
+                old_vx = vx
+                old_vy = vy
 
-            lift_accel = np.cos(np.radians(spin_axis)) * spin_factor * speed_mag * dt
+                vx += (-old_vy / horizontal_speed) * side_accel * dt
+                vy += (old_vx / horizontal_speed) * side_accel * dt
+
+            lift_accel = 0.03 * backspin_factor * speed_mag
 
             vz += (lift_accel - gravity) * dt
 
@@ -236,12 +239,14 @@ class Hole:
     
     def simulate_roll(self, x, y, z, vx, vy, roll_speed, trajectory):
 
-        dt = 0.05
+        dt = 0.01
 
         horizontal_speed = np.hypot(vx, vy)
 
         if horizontal_speed == 0:
-            return True, x, y, z
+            if surface == "out":
+                return True, x, y, z
+            return False, x, y, z
 
         while roll_speed > 0.1:
 
@@ -259,7 +264,7 @@ class Hole:
             surface = self.get_surface(x, y)
 
             if surface == "out":
-                return False, x, y, z
+                return True, x, y, z
             elif surface == "fairway":
                 friction = 0.96
             elif surface == "rough":
@@ -275,7 +280,7 @@ class Hole:
 
             roll_speed *= friction
 
-        return True, x, y, z
+        return False, x, y, z
     
     def simulate_shot(self, start_position, power, direction, club_index):
         
@@ -288,10 +293,10 @@ class Hole:
 
         out_of_bounds, x, y, z = self.simulate_roll(x, y, z, vx, vy, roll_speed, trajectory)
 
-        if not out_of_bounds:
-            return np.array([x, y, z]), trajectory, False, club_index
+        if out_of_bounds:
+            return np.array([x, y, z]), trajectory, True, club_index
 
-        return np.array([x, y, z]), trajectory, True, club_index
+        return np.array([x, y, z]), trajectory, False, club_index
 
     def show(self):
 
@@ -328,7 +333,7 @@ class Hole:
         
         path = pv.lines_from_points(np.array(trajectory)) 
         
-        plotter.add_mesh(path, color=club.colour, line_width=3, label=club.name) 
+        plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name) 
 
         plotter.add_legend()
         plotter.show()
@@ -363,10 +368,15 @@ class Hole:
             path = pv.lines_from_points(np.array(trajectory))
 
             if club.name not in legend_clubs:
-                plotter.add_mesh(path, color=club.colour, line_width=3, label=club.name)
+                plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name)
                 legend_clubs.add(club.name)
             else:
-                plotter.add_mesh(path, color=club.colour, line_width=3)
+                plotter.add_mesh(path, color=club.colour, line_width=5)
+        
+            distance = np.linalg.norm(position - self.hole.hole_position)
+        
+            if distance <= 1.0:
+                break
         
         plotter.add_legend()
         plotter.show()
