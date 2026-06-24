@@ -131,8 +131,8 @@ class Eval(FloatProblem):
 # Test the function
 if __name__ == "__main__":
 	
-	player = Player(-54)
+	player = Player(-5)
 	
 	hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 
-	hole.show_shot(hole.tee_position, power=100, direction=269, club_index=0)
+	hole.show_shot(hole.tee_position, power=100, direction=273, club_index=0)

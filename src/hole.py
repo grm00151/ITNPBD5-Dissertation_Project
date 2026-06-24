@@ -253,7 +253,7 @@ class Hole:
     
     def simulate_roll(self, x, y, z, vx, vy, roll_speed, trajectory):
 
-        dt = 0.01
+        dt = 0.05
 
         horizontal_speed = np.hypot(vx, vy)
 
@@ -269,8 +269,8 @@ class Hole:
             x += (vx / horizontal_speed) * roll_speed * dt
             y += (vy / horizontal_speed) * roll_speed * dt
 
-            x -= slope_x * 0.05
-            y -= slope_y * 0.05
+            x -= slope_x * dt
+            y -= slope_y * dt
 
             if (x < 0 or x >= self.cols or y < 0 or y >= self.rows):
                 break
@@ -280,13 +280,13 @@ class Hole:
             if surface == "out":
                 return True, x, y, z
             elif surface == "fairway":
-                friction = 0.96
+                friction = 0.95
             elif surface == "rough":
-                friction = 0.94
+                friction = 0.90
             elif surface == "green":
                 friction = 0.97
             else:
-                friction = 0.95
+                friction = 0.88
 
             z = self.get_height(x, y)
 
@@ -296,10 +296,76 @@ class Hole:
 
         return False, x, y, z
     
+    def simulate_putt(self, start_position, club, power, direction):
+        
+        gravity = 10.73
+        dt = 0.01
+
+        direction_angle = np.radians(direction)
+
+        x = start_position[0]
+        y = start_position[1]
+        z = self.get_height(x, y)
+
+        handicap_norm = 1 - (self.player.handicap + 54) / 62
+
+        max_speed = club.ball_speed
+        min_speed = max_speed * 0.2
+        speed_range = max_speed - min_speed
+
+        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 100.0)
+
+        vx = speed * np.cos(direction_angle)
+        vy = speed * np.sin(direction_angle)
+
+        trajectory = [[x, y, z]]
+
+        while speed > 0.05:
+            
+            _, slope_x, slope_y = self.get_surface_geometry(x, y)
+
+            vx -= slope_x * dt
+            vy -= slope_y * dt
+
+            x += vx * dt
+            y += vy * dt
+
+            if x < 0 or x >= self.cols or y < 0 or y >= self.rows:
+                break
+
+            surface = self.get_surface(x, y)
+            z = self.get_height(x, y)
+
+            speed = np.hypot(vx, vy)
+
+            trajectory.append([x, y, z])
+
+            if surface == "out":
+                return np.array([x, y, z]), trajectory, True
+            elif surface == "fairway":
+                friction = 0.96
+            elif surface == "rough":
+                friction = 0.94
+            elif surface == "green":
+                friction = 0.97
+            else:
+                friction = 0.95
+
+            vx *= friction
+            vy *= friction
+
+        return np.array([x, y, z]), trajectory, False
+    
     def simulate_shot(self, start_position, power, direction, club_index):
         
         club_index = self.get_allowed_club(start_position, club_index)
         club = self.player.clubs[int(club_index)]
+
+        if club.name == "Putter":
+
+            position, trajectory, out_of_bounds = self.simulate_putt(start_position, club, power, direction)
+
+            return position, trajectory, out_of_bounds, club_index
 
         x, y, z, vx, vy, vz, trajectory = self.simulate_flight(start_position, club, power, direction)
 
@@ -330,7 +396,7 @@ class Hole:
 
     def show_shot(self, start_position, power, direction, club_index):
         
-        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index) 
+        position, trajectory, _, club_index = self.simulate_shot(start_position, power, direction, club_index) 
         
         print(self.get_surface(position[0], position[1]))
         
