@@ -347,8 +347,9 @@ class Hole:
         
         path = pv.lines_from_points(np.array(trajectory)) 
         
-        plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name) 
+        plotter.add_mesh(path, color=club.colour, line_width=5, label=club.name)
 
+        plotter.enable_fly_to_right_click()
         plotter.add_legend()
         plotter.show()
 
@@ -392,5 +393,6 @@ class Hole:
             if distance <= 1.0:
                 break
         
+        plotter.enable_fly_to_right_click()
         plotter.add_legend()
         plotter.show()
