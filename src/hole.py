@@ -436,7 +436,7 @@ class Hole:
         plotter.add_legend()
         plotter.show()
 
-    def show_strategy(self, variables):
+    def show_strategy(self, variables, screenshot=None):
 
         position = np.copy(self.tee_position)
 
@@ -478,4 +478,8 @@ class Hole:
         
         plotter.enable_fly_to_right_click()
         plotter.add_legend()
-        plotter.show()
+        plotter.show(auto_close=False)
+        if screenshot is not None:
+            plotter.camera_position = [(1200, 320, 450), (320, 320, 53), (0, 0, 1)]
+            plotter.screenshot(screenshot)
+        plotter.close()

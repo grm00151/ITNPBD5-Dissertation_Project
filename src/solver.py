@@ -3,6 +3,8 @@ import io
 import timeit
 import time
 import logging
+import os
+import shutil
 
 from jmetal.algorithm.singleobjective.genetic_algorithm import GeneticAlgorithm
 from jmetal.operator.mutation import PolynomialMutation, BitFlipMutation
@@ -124,7 +126,7 @@ class Solver:
 			first = False
 		print("\t,%.2f" % (runtime),flush=True)
 
-	def solveGA(self,problem):
+	def solveGA(self,problem,results_dir):
 		max_eval = int(self.prm['maxEval'])
 		pbar = tqdm(total=max_eval, desc="GA", unit="eval")
 		original_evaluate = problem.evaluate
@@ -149,7 +151,8 @@ class Solver:
 			pbar.close()
 		toc = timeit.default_timer()
 		results = algorithm.result()
-		problem.hole.show_strategy(results.variables)
+		self.saveResults(results_dir, results, toc - tic)
+		problem.hole.show_strategy(results.variables, screenshot=os.path.join(results_dir, "strategy.png"))
 		self.logResults(problem,results.objectives,results,toc - tic)
 		if self.tracing():
 			self.printResults(problem,algorithm,results,toc - tic)
@@ -160,7 +163,7 @@ class Solver:
 		score = original_evaluate(results)
 		eprint("Score: %.2f" % (results.objectives[0]))
 				
-	def solveNSGA2(self,problem):
+	def solveNSGA2(self,problem,results_dir):
 		max_eval = int(self.prm['maxEval'])
 		pbar = tqdm(total=max_eval, desc="NSGA-II", unit="eval")
 		original_evaluate = problem.evaluate
@@ -186,14 +189,15 @@ class Solver:
 			algorithm.run()
 		finally:
 			pbar.close()
+		toc = timeit.default_timer()
 		front = algorithm.result()
+		self.saveResults(results_dir, front, toc - tic)
 		best = min(front, key=lambda s: (s.objectives[0], s.objectives[1])) 
-		problem.hole.show_strategy(best.variables)
+		problem.hole.show_strategy(best.variables, screenshot=os.path.join(results_dir, "strategy.png"))
 		# Save results to file
 		#print_function_values_to_file(front, 'FUN.' + algorithm.label + ".txt")
 		#print_variables_to_file(front, 'VAR.'+ algorithm.label + ".txt")
 		
-		toc = timeit.default_timer()
 		if type(front) is not list:
 			front = [front]
 		for p in front:
@@ -210,6 +214,37 @@ class Solver:
 	def checkCommands(self,args):
 		if len(args) < 1: return
 		self.assignParams(args)
+
+	def create_results_folder(self, config):
+		algorithm = self.prm["task"]
+
+		base_dir = os.path.join("results", algorithm)
+		os.makedirs(base_dir, exist_ok=True)
+
+		test_num = 1
+		while os.path.exists(os.path.join(base_dir, f"test-{test_num}")):
+			test_num += 1
+
+		results_dir = os.path.join(base_dir, f"test-{test_num}")
+		os.makedirs(results_dir)
+
+		shutil.copy2(config, results_dir)
+
+		return results_dir
+	
+	def saveResults(self, results_dir, result, runtime):
+		with open(os.path.join(results_dir, "results.txt"), "w") as f:
+			
+			f.write(f"Runtime: {runtime:.2f} seconds\n\n")
+			
+			if isinstance(result, list):
+				for i, solution in enumerate(result, start=1):
+					f.write(f"Solution {i}\n")
+					f.write(f"Objective Score: {solution.objectives}\n")
+					f.write(f"Variables: {solution.variables}\n\n")
+			else:
+				f.write(f"Objective Score: {result.objectives}\n")
+				f.write(f"Variables: {result.variables}\n")
 			
 	def processTask(self,options):
 		# The first command line parameter must be a parameter file specifying the task
@@ -221,6 +256,8 @@ class Solver:
 		# Load the task parameters from the supplied param file
 		config = self.loadFile(options[1])
 		self.assignParams(config)
+
+		results_dir = self.create_results_folder(options[1])
 		# Now override file parameters with possible command line parameters 
 		self.checkCommands(options)
 
@@ -247,8 +284,8 @@ class Solver:
 
 		# Now carry out the task	
 		if (task == "test"): self.test(problem,[1, 0, 0, 0])
-		if (task == "GA"): self.solveGA(problem)
-		if (task == "NSGA2"): self.solveNSGA2(problem)
+		if (task == "GA"): self.solveGA(problem, results_dir)
+		if (task == "NSGA2"): self.solveNSGA2(problem, results_dir)
 
 if __name__ == "__main__":
 	logging.disable()
