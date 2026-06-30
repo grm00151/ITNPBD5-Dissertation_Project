@@ -296,7 +296,7 @@ class Hole:
             elif surface == "rough":
                 friction = 0.90
             elif surface == "green":
-                friction = 0.99
+                friction = 0.97
             else:
                 friction = 0.88
 
@@ -321,7 +321,7 @@ class Hole:
         min_speed = max_speed * 0.2
         speed_range = max_speed - min_speed
 
-        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 100.0)
+        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 20.0)
 
         vx = speed * np.cos(direction_angle)
         vy = speed * np.sin(direction_angle)
@@ -360,13 +360,13 @@ class Hole:
             if surface == "out":
                 return np.array([x, y, z]), trajectory, True
             elif surface == "fairway":
-                friction = 0.96
-            elif surface == "rough":
-                friction = 0.94
-            elif surface == "green":
-                friction = 0.99
-            else:
                 friction = 0.95
+            elif surface == "rough":
+                friction = 0.90
+            elif surface == "green":
+                friction = 0.97
+            else:
+                friction = 0.88
 
             vx *= friction
             vy *= friction
@@ -374,8 +374,7 @@ class Hole:
         return np.array([x, y, z]), trajectory, False
     
     def simulate_shot(self, start_position, power, direction, club_index):
-        
-        club_index = self.get_allowed_club(start_position, club_index)
+
         club = self.player.clubs[int(club_index)]
 
         if club.name == "Putter":
@@ -413,7 +412,7 @@ class Hole:
 
     def show_shot(self, start_position, power, direction, club_index):
         
-        position, trajectory, _, club_index = self.simulate_shot(start_position, power, direction, club_index) 
+        position, trajectory, _, _ = self.simulate_shot(start_position, power, direction, club_index) 
         
         print(self.get_surface(position[0], position[1]))
         
@@ -459,7 +458,7 @@ class Hole:
             club_index = int(round(variables[i + 2]))
             club_index = np.clip(club_index, 0, len(self.player.clubs) - 1)
 
-            position, trajectory, _, club_index = self.simulate_shot(position, power, direction, club_index)
+            position, trajectory, _, _ = self.simulate_shot(position, power, direction, club_index)
 
             club = self.player.clubs[club_index]
 

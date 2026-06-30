@@ -7,3 +7,6 @@ __pycache__/
 
 # VS Code
 .vscode/
+
+# Results dicrectory
+results/
