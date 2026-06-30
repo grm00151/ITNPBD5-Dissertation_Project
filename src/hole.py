@@ -32,7 +32,7 @@ class Player:
             Club("Gap Wedge", 28.5, 79.5, 10300, "violet"),
             Club("Sand Wedge", 31.5, 72.0, 11100, "orchid"),
             Club("Lob Wedge", 35.0, 66.0, 11900, "purple"),
-            Club("Putter", 3.0, 15.0, 0, "grey")
+            Club("Putter", 3.0, 12.0, 0, "grey")
         ]
 
 class Hole:
@@ -251,8 +251,9 @@ class Hole:
 
         return horizontal_speed * 0.15 * tangent_factor
     
-    def simulate_roll(self, x, y, z, vx, vy, roll_speed, trajectory):
+    def simulate_roll(self, x, y, z, vx, vy, vz, roll_speed, trajectory):
 
+        gravity = 10.73
         dt = 0.05
 
         horizontal_speed = np.hypot(vx, vy)
@@ -277,6 +278,17 @@ class Hole:
 
             surface = self.get_surface(x, y)
 
+            vz -= gravity * dt
+            z += vz * dt
+
+            terrain = self.get_height(x, y)
+
+            if z <= terrain:
+                z = terrain
+                vz = 0.0
+
+            trajectory.append([x, y, z])
+
             if surface == "out":
                 return True, x, y, z
             elif surface == "fairway":
@@ -284,13 +296,9 @@ class Hole:
             elif surface == "rough":
                 friction = 0.90
             elif surface == "green":
-                friction = 0.97
+                friction = 0.99
             else:
                 friction = 0.88
-
-            z = self.get_height(x, y)
-
-            trajectory.append([x, y, z])
 
             roll_speed *= friction
 
@@ -299,7 +307,7 @@ class Hole:
     def simulate_putt(self, start_position, club, power, direction):
         
         gravity = 10.73
-        dt = 0.01
+        dt = 0.05
 
         direction_angle = np.radians(direction)
 
@@ -317,6 +325,7 @@ class Hole:
 
         vx = speed * np.cos(direction_angle)
         vy = speed * np.sin(direction_angle)
+        vz = 0.0
 
         trajectory = [[x, y, z]]
 
@@ -334,9 +343,17 @@ class Hole:
                 break
 
             surface = self.get_surface(x, y)
-            z = self.get_height(x, y)
 
             speed = np.hypot(vx, vy)
+
+            vz -= gravity * dt
+            z += vz * dt
+
+            terrain = self.get_height(x, y)
+
+            if z <= terrain:
+                z = terrain
+                vz = 0.0
 
             trajectory.append([x, y, z])
 
@@ -347,7 +364,7 @@ class Hole:
             elif surface == "rough":
                 friction = 0.94
             elif surface == "green":
-                friction = 0.97
+                friction = 0.99
             else:
                 friction = 0.95
 
@@ -371,7 +388,7 @@ class Hole:
 
         roll_speed = self.calculate_roll_speed(x, y, vx, vy, vz)
 
-        out_of_bounds, x, y, z = self.simulate_roll(x, y, z, vx, vy, roll_speed, trajectory)
+        out_of_bounds, x, y, z = self.simulate_roll(x, y, z, vx, vy, vz, roll_speed, trajectory)
 
         if out_of_bounds:
             return np.array([x, y, z]), trajectory, True, club_index
