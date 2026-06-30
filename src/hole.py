@@ -480,6 +480,7 @@ class Hole:
         plotter.add_legend()
         plotter.show(auto_close=False)
         if screenshot is not None:
-            plotter.camera_position = [(1200, 320, 450), (320, 320, 53), (0, 0, 1)]
-            plotter.screenshot(screenshot)
+            plotter.camera_position = [(1200, 320, 550), (320, 320, 53), (0, 0, 1)]
+            plotter.render()
+            plotter.screenshot(screenshot, scale=4)
         plotter.close()
