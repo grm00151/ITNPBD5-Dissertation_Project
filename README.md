@@ -19,25 +19,33 @@ Python 3.10+
 
 Required packages:
 
+```
 numpy
 pyvista
 pillow
 jmetalpy
 tqdm
+```
 
 Install using pip:
 
+```bash
 pip install numpy pyvista pillow jmetalpy tqdm
+```
 
 ## Running the optimisation 
 
 ### Genetic Algorithm 
 
+```bash
 python src/solver.py configs/GA-config-params.txt
+```
 
 ### Non-dominated Sorting Genetic Algorithm 2
 
+```bash
 python src/solver.py configs/NSGA2-config-params.txt
+```
 
 ## Config files 
 
@@ -45,6 +53,7 @@ Both optimisation methods use config files located in the 'configs' directory.
 
 ### Parameters 
 
+```
 task - GA or NSGA2
 lowerBounds - Minimum values for power, direction and club
 lowerBounds - Maximum values for power, direction and club
@@ -56,14 +65,17 @@ heightmap - Terrain height image
 surfacemap - Surface classification image 
 maxShots - Maximum shots per strategy
 handicap - Player handicap
+```
 
 ## Decision Variables
 
 Each shot is represented by three variables:
 
+```
 power - 0-100
 direction - 0-360
 club index - 0-13
+```
 
 ## Objectives
 
@@ -95,29 +107,41 @@ PyVista is used to display the terrain, surface colours, shot trajectories, club
 
 Each optimisation run creates a new directory:
 
+```
 results/
     GA/
-        test-1
-        test-2
+        test-1/
+        test-2/
         ...
-    NSGA2
-        test-1
+    NSGA2/
+        test-1/
+```
 
 Where each test folder contains:
 
+```
 config file used
 results.txt
 strategy.png
+```
 
-results.txt contains runtime, objective score(s) and solution variables
+The results.txt file contains runtime, objective score(s) and solution variables
 
 ## Future improvements
+
+Possible extensions include:
+
+```
 Wind effects/Weather conditions
 Additional optimisation algorithms
+Improved modelling
 Multiple hole support
+```
 
 ## Author
 
 Graeme MacDonald 
 
 Dissertation Project - Optimising shot strategy in golf using evolutionary algorithms
+
+Developed in Python. 
