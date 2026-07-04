@@ -37,6 +37,8 @@ pip install numpy pyvista pillow jmetalpy tqdm
 
 ### Genetic Algorithm 
 
+Run the following from a terminal (Command Prompt, PowerShell, Terminal) in the projects root directory. 
+
 ```bash
 python src/solver.py configs/GA-config-params.txt
 ```

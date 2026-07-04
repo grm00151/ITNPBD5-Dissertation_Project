@@ -9,4 +9,11 @@ __pycache__/
 .vscode/
 
 # Results dicrectory
-results/
+
+# Ignore generated results folders 
+results/GA/*
+results/NSGA2/*
+
+# Keep the directories
+!results/GA/.gitkeep
+!results/NSGA2/.gitkeep
