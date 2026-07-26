@@ -4,6 +4,7 @@ import timeit
 import time
 import logging
 import os
+import csv
 import shutil
 
 from jmetal.algorithm.singleobjective.genetic_algorithm import GeneticAlgorithm
@@ -33,6 +34,8 @@ class Solver:
 	
 	prm = {
 		'task':'test',
+
+		'runs':1,
 		
 		'variables':0,
 		
@@ -126,7 +129,7 @@ class Solver:
 			first = False
 		print("\t,%.2f" % (runtime),flush=True)
 
-	def solveGA(self,problem,results_dir):
+	def solveGA(self,problem,results_dir, run):
 		max_eval = int(self.prm['maxEval'])
 		pbar = tqdm(total=max_eval, desc="GA", unit="eval")
 		original_evaluate = problem.evaluate
@@ -147,23 +150,21 @@ class Solver:
 		)
 		try:
 			algorithm.run()
-		finally:		
+		finally:
+			problem.evaluate = original_evaluate
 			pbar.close()
 		toc = timeit.default_timer()
 		results = algorithm.result()
-		self.saveResults(results_dir, results, toc - tic)
-		problem.hole.show_strategy(results.variables, screenshot=os.path.join(results_dir, "strategy.png"))
+		self.saveResults(results_dir, results, toc - tic, run)
 		self.logResults(problem,results.objectives,results,toc - tic)
 		if self.tracing():
 			self.printResults(problem,algorithm,results,toc - tic)
 			eprint("",flush=True)
 			time.sleep(0.5)
-			
-		# Uncomment the following line to show the best solution
-		score = original_evaluate(results)
-		eprint("Score: %.2f" % (results.objectives[0]))
+
+		return results
 				
-	def solveNSGA2(self,problem,results_dir):
+	def solveNSGA2(self,problem,results_dir, run):
 		max_eval = int(self.prm['maxEval'])
 		pbar = tqdm(total=max_eval, desc="NSGA-II", unit="eval")
 		original_evaluate = problem.evaluate
@@ -188,12 +189,12 @@ class Solver:
 		try:
 			algorithm.run()
 		finally:
+			problem.evaluate = original_evaluate
 			pbar.close()
 		toc = timeit.default_timer()
 		front = algorithm.result()
-		self.saveResults(results_dir, front, toc - tic)
+		self.saveResults(results_dir, front, toc - tic, run)
 		best = min(front, key=lambda s: (s.objectives[0], s.objectives[1])) 
-		problem.hole.show_strategy(best.variables, screenshot=os.path.join(results_dir, "strategy.png"))
 		# Save results to file
 		#print_function_values_to_file(front, 'FUN.' + algorithm.label + ".txt")
 		#print_variables_to_file(front, 'VAR.'+ algorithm.label + ".txt")
@@ -203,6 +204,8 @@ class Solver:
 		for p in front:
 			self.logResults(problem,p.objectives,p,toc - tic)
 		print()
+
+		return best
 
 	def test(self,problem,testvalues: FloatSolution):
 		problem.trace = True
@@ -231,22 +234,47 @@ class Solver:
 		shutil.copy2(config, results_dir)
 
 		return results_dir
-	
-	def saveResults(self, results_dir, result, runtime):
-		with open(os.path.join(results_dir, "results.txt"), "w") as f:
-			
-			f.write(f"Runtime: {runtime:.2f} seconds\n\n")
-			
+
+	def saveResults(self, results_dir, result, runtime, run):
+
+		algorithm = self.prm["task"]
+
+		csv_path = os.path.join(results_dir, f"{algorithm}-results.csv")
+
+		file_exists = os.path.exists(csv_path)
+
+		with open(csv_path, "a", newline="") as f:
+
+			writer = csv.writer(f)
+
+			if not file_exists:
+				if isinstance(result, list):
+					writer.writerow(["Run", "Solution", "Distance", "Strokes", "Runtime"])
+				else:
+					writer.writerow(["Run", "Distance", "Strokes", "Fitness", "Runtime"])
+
 			if isinstance(result, list):
 				for i, solution in enumerate(result, start=1):
-					f.write(f"Solution {i}\n")
-					f.write(f"Objective Score: {solution.objectives}\n")
-					f.write(f"Variables: {solution.variables}\n\n")
+					writer.writerow([
+						run,
+						i,
+						solution.distance,
+						solution.strokes,
+						round(runtime, 1)
+					])
 			else:
-				f.write(f"Objective Score: {result.objectives}\n")
-				f.write(f"Variables: {result.variables}\n")
-			
+				writer.writerow([
+					run,
+					result.distance,
+					result.strokes,
+					result.objectives[0],
+					round(runtime, 1)
+				])
+
 	def processTask(self,options):
+
+		best_solution = None
+
 		# The first command line parameter must be a parameter file specifying the task
 		if len(options)<=1:
 			print("Parameter file required:")
@@ -282,10 +310,28 @@ class Solver:
 			problem.describe()
 			self.printParams()
 
-		# Now carry out the task	
-		if (task == "test"): self.test(problem,[1, 0, 0, 0])
-		if (task == "GA"): self.solveGA(problem, results_dir)
-		if (task == "NSGA2"): self.solveNSGA2(problem, results_dir)
+		runs = int(self.prm['runs'])
+
+		for run in range(runs):
+
+			print(f"\nRun {run + 1}/{runs}")
+
+			# Now carry out the task	
+			if (task == "test"): self.test(problem,[1, 0, 0, 0])
+
+			if (task == "GA"):
+				solution = self.solveGA(problem, results_dir, run)
+				if best_solution is None or solution.objectives[0] < best_solution.objectives[0]:
+					best_solution = solution
+
+			if (task == "NSGA2"):
+				solution = self.solveNSGA2(problem, results_dir, run)
+				if (best_solution is None or (solution.objectives[0], solution.objectives[1]) < (best_solution.objectives[0], best_solution.objectives[1])):
+					best_solution = solution
+
+		if best_solution is not None:
+			problem.hole.show_strategy(best_solution, screenshot=os.path.join(results_dir, "best-strategy.png"))
+			problem.hole.show_strategy(best_solution)
 
 if __name__ == "__main__":
 	logging.disable()

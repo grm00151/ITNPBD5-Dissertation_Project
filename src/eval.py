@@ -75,6 +75,8 @@ class Eval(FloatProblem):
 		
 		HOLE_RADIUS = 1.0
 		strokes = 0
+
+		trajectories = []
 		
 		for i in range(0, len(variables), 3):
 			
@@ -82,16 +84,17 @@ class Eval(FloatProblem):
 			direction = variables[i + 1]
 			
 			club = int(round(variables[i + 2]))
-			club = np.clip(club, 0, len(self.hole.player.clubs) - 1)
+			club = int(np.clip(club, 0, len(self.hole.player.clubs) - 1))
 
 			club = self.hole.get_allowed_club(position, club)
-
 			variables[i + 2] = club
 			
-			position, _, out_of_bounds, _= self.hole.simulate_shot(position, power, direction, club)
+			position, trajectory, out_of_bounds, club = self.hole.simulate_shot(position, power, direction, club)
+
+			trajectories.append((trajectory, club))
 
 			if out_of_bounds:
-				return (1e6, 1e6)
+				return (1e6, 1e6, trajectories)
 
 			strokes += 1
 			
@@ -99,12 +102,12 @@ class Eval(FloatProblem):
 			
 			# Hole reached
 			if distance <= HOLE_RADIUS:
-				return 0.0, strokes
+				return 0.0, strokes, trajectories
 			
 		# Hole not reached
 		final_distance = np.linalg.norm(position - self.hole.hole_position)
 			
-		return final_distance, strokes
+		return final_distance, strokes, trajectories
 
 	# evaluate is called by the code in solver.py but you only need to edit
 	# code in here and try out different fitness functions.
@@ -121,7 +124,11 @@ class Eval(FloatProblem):
 		# solution.objectives[0] = 8 - self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalGolfStrategyGA(solution.variables)
-		distance, strokes = self.evalGolfStrategy(solution.variables)
+		distance, strokes, trajectories = self.evalGolfStrategy(solution.variables)
+
+		solution.distance = distance
+		solution.strokes = strokes
+		solution.trajectories = trajectories
 		
 		if (len(solution.objectives) > 1):
 			solution.objectives[0] = distance

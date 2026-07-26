@@ -435,11 +435,9 @@ class Hole:
         plotter.add_legend()
         plotter.show()
 
-    def show_strategy(self, variables, screenshot=None):
+    def show_strategy(self, solution, screenshot=None):
 
-        position = np.copy(self.tee_position)
-
-        plotter = pv.Plotter()
+        plotter = pv.Plotter(off_screen=screenshot is not None)
 
         rgb = np.flipud(np.rot90(self.surfacemap))
         rgb = rgb.reshape(-1, 3)
@@ -450,15 +448,7 @@ class Hole:
 
         legend_clubs = set()
 
-        for i in range(0, len(variables), 3):
-
-            power = variables[i]
-            direction = variables[i + 1]
-
-            club_index = int(round(variables[i + 2]))
-            club_index = np.clip(club_index, 0, len(self.player.clubs) - 1)
-
-            position, trajectory, _, _ = self.simulate_shot(position, power, direction, club_index)
+        for trajectory, club_index in solution.trajectories:
 
             club = self.player.clubs[club_index]
 
@@ -470,16 +460,13 @@ class Hole:
             else:
                 plotter.add_mesh(path, color=club.colour, line_width=5)
         
-            distance = np.linalg.norm(position - self.hole_position)
-        
-            if distance <= 1.0:
-                break
-        
         plotter.enable_fly_to_right_click()
         plotter.add_legend()
-        plotter.show(auto_close=False)
         if screenshot is not None:
             plotter.camera_position = [(1200, 320, 550), (320, 320, 53), (0, 0, 1)]
             plotter.render()
             plotter.screenshot(screenshot, scale=4)
+        else:
+            plotter.show()
+            
         plotter.close()

@@ -2,6 +2,8 @@
 // Task could be GA,NSGA2,test
 task=NSGA2
 
+runs=5
+
 lowerBounds=0,0,0
 upperBounds=100,360,13
 
@@ -16,6 +18,6 @@ heightmap=images/heightmap.png
 surfacemap=images/surfacemap.png
 
 // Player Info
-maxShots=5
+maxShots=10
 // handicap range 8 to -54
 handicap = 8
