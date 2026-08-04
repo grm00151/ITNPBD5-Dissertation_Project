@@ -26,6 +26,7 @@ from tqdm import tqdm
 
 from eval import Eval
 from hole import Player, Hole
+from observer import Observer
 
 def eprint(*args, **kwargs):
 	print(*args,file=sys.stderr,**kwargs)
@@ -148,6 +149,7 @@ class Solver:
 			selection=BinaryTournamentSelection(),
 			termination_criterion=StoppingByEvaluations(max_evaluations=int(self.prm['maxEval']))
 		)
+		algorithm.observable.register(Observer(results_dir, "GA", run))
 		try:
 			algorithm.run()
 		finally:
@@ -186,6 +188,7 @@ class Solver:
 			# crossover=SPXCrossover(probability=1.0),
 			termination_criterion=StoppingByEvaluations(max_evaluations=int(self.prm['maxEval']))
 			)
+		algorithm.observable.register(Observer(results_dir, "NSGA2", run))
 		try:
 			algorithm.run()
 		finally:
@@ -249,24 +252,26 @@ class Solver:
 
 			if not file_exists:
 				if isinstance(result, list):
-					writer.writerow(["Run", "Solution", "Distance", "Strokes", "Runtime"])
+					writer.writerow(["Run", "Solution", "Distance", "Strokes", "Holed", "Runtime"])
 				else:
-					writer.writerow(["Run", "Distance", "Strokes", "Fitness", "Runtime"])
+					writer.writerow(["Run", "Distance", "Strokes", "Holed", "Fitness", "Runtime"])
 
 			if isinstance(result, list):
 				for i, solution in enumerate(result, start=1):
 					writer.writerow([
-						run,
+						run + 1,
 						i,
 						solution.distance,
 						solution.strokes,
+						solution.holed,
 						round(runtime, 1)
 					])
 			else:
 				writer.writerow([
-					run,
+					run + 1,
 					result.distance,
 					result.strokes,
+					result.holed,
 					result.objectives[0],
 					round(runtime, 1)
 				])

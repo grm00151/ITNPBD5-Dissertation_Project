@@ -129,19 +129,20 @@ class Eval(FloatProblem):
 		solution.distance = distance
 		solution.strokes = strokes
 		solution.trajectories = trajectories
+		solution.holed = (distance <= 1.0)
 		
 		if (len(solution.objectives) > 1):
 			solution.objectives[0] = distance
 			solution.objectives[1] = strokes
 		else:
-			solution.objectives[0] = distance + (strokes * 20)
+			solution.objectives[0] = distance + (strokes * 200)
 
 		return solution
 
 # Test the function
 if __name__ == "__main__":
 	
-	player = Player(8)
+	player = Player(-52)
 	
 	hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 

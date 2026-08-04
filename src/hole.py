@@ -128,13 +128,13 @@ class Hole:
         handicap_norm = 1 - (self.player.handicap + 54) / 62
 
         if club.name == "Driver":
-            max_axis = 45
+            max_axis = 90
         elif "Wood" in club.name or "Hybrid" in club.name:
-            max_axis = 35
+            max_axis = 80
         elif "Iron" in club.name:
-            max_axis = 25
+            max_axis = 70
         else:
-            max_axis = 15
+            max_axis = 60
 
         std_dev = (max_axis * handicap_norm) / 3
 
