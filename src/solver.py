@@ -294,10 +294,10 @@ class Solver:
 		# Now override file parameters with possible command line parameters 
 		self.checkCommands(options)
 
-		maxShots = int(self.prm['maxShots'])
+		maxStrokes = int(self.prm['maxStrokes'])
 
-		lowerBounds = self.prm['lowerBounds'] * maxShots
-		upperBounds = self.prm['upperBounds'] * maxShots
+		lowerBounds = self.prm['lowerBounds'] * maxStrokes
+		upperBounds = self.prm['upperBounds'] * maxStrokes
 
 		handicap = float(self.prm['handicap'])
 		player = Player(handicap)

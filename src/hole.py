@@ -132,9 +132,15 @@ class Hole:
         elif "Wood" in club.name or "Hybrid" in club.name:
             max_axis = 80
         elif "Iron" in club.name:
-            max_axis = 70
+            max_axis = 67
+        elif "Pitching" in club.name:
+            max_axis = 50
+        elif "Gap" in club.name:
+            max_axis = 42
+        elif "Sand" in club.name:
+            max_axis = 35
         else:
-            max_axis = 60
+            max_axis = 30
 
         std_dev = (max_axis * handicap_norm) / 3
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-My project implements a golf shot simulation and optimisation framework in python. It uses evolutionary algorithms to discover optimal golf strategies over multiple shots on a heightmapped golf hole.
+My project implements a golf shot simulation and optimisation framework in python. It uses evolutionary algorithms to discover optimal golf strategies over multiple stokes on a heightmapped golf hole.
 
 The two optimisation algorithms used are:
 
@@ -35,9 +35,9 @@ pip install numpy pyvista pillow jmetalpy tqdm
 
 ## Running the optimisation 
 
-### Genetic Algorithm 
+Run the following commands from a terminal (Command Prompt, PowerShell, Terminal) in the projects root directory. 
 
-Run the following from a terminal (Command Prompt, PowerShell, Terminal) in the projects root directory. 
+### Genetic Algorithm 
 
 ```bash
 python src/solver.py configs/GA-config-params.txt
@@ -57,6 +57,7 @@ Both optimisation methods use config files located in the 'configs' directory.
 
 ```
 task - GA or NSGA2
+runs - Number of independent algorithm executions
 lowerBounds - Minimum values for power, direction and club
 lowerBounds - Maximum values for power, direction and club
 popSize - Population size
@@ -65,7 +66,7 @@ objectives - Number of objectives (1 for GA, 2+ for NSGA2)
 trace - Enable console output
 heightmap - Terrain height image 
 surfacemap - Surface classification image 
-maxShots - Maximum shots per strategy
+maxStrokes - Maximum stokes per strategy
 handicap - Player handicap
 ```
 
@@ -83,11 +84,11 @@ club index - 0-13
 
 ### Genetic Algorithm 
 
-Minimises the distance to the hole + 20 times the number of strokes encouraging reaching the hole and using fewer shots
+Minimises the distance to the hole + 200 times the number of strokes encouraging reaching the hole and using fewer strokes
 
 ### Non-dominated Sorting Genetic Algorithm 2
 
-Optimises two objectives at the same time, distance to the hole and number of strokes. This produces a pareto front on non-dominated strategies. 
+Optimises two objectives at the same time, distance to the hole and number of strokes. This produces a pareto front of non-dominated strategies. 
 
 ## Golf simulation 
 
@@ -96,10 +97,11 @@ Each shot consists of club selection, launch angle calculation, inital ball spee
 Rules include: 
 Putter is automatically selected on the green. 
 Sand wedge is automatically selected in the bunkers. 
+Penalty for going out of bounds. 
 
 ## Player model
 
-Higher handicaps introduce greater randomness in shot direction, launch angle and ball speed. 
+Higher handicaps introduce greater randomness in shot direction and ball speed. 
 
 ## Visualisation 
 
@@ -122,12 +124,19 @@ results/
 Where each test folder contains:
 
 ```
-config file used
-results.txt
-strategy.png
+best-strategy.png
+(algorithm)-config-params.txt
+(algorithm)-convergence.csv
+(algorithm)-results.csv
 ```
 
-The results.txt file contains runtime, objective score(s) and solution variables
+best-strategy.png shows the best strategy found across all runs of the algorithm.
+
+(algorithm)-config-params.txt contains the configuation parameters used for the experiment. 
+
+(algorithm)-convergence.csv file show the convergence behaviour across all runs included in the experiment.
+
+(algorithm)-results.csv file contains run number, distance to hole, stokes, if it reached the hole, fitness depending on algorithm and runtime.
 
 ## Future improvements
 
