@@ -5,13 +5,14 @@ from PIL import Image
 
 class Club:
 
-    def __init__(self, name, launch_angle, ball_speed, spin_rate, colour):
+    def __init__(self, name, launch_angle, ball_speed, spin_rate, colour, max_axis):
 
         self.name = name
         self.launch_angle = launch_angle
         self.ball_speed = ball_speed
         self.spin_rate = spin_rate
         self.colour = colour
+        self.max_axis = max_axis
 
 class Player:
 
@@ -19,20 +20,20 @@ class Player:
 
         self.handicap = handicap
         self.clubs = [
-            Club("Driver", 12.0, 175.0, 2500, "red"),
-            Club("3 Wood", 11.0, 166.5, 3200, "orange"),
-            Club("5 Wood", 12.5, 153.0, 3800, "chocolate"),
-            Club("4 Hybrid", 14.0, 141.0, 4500, "limegreen"),
-            Club("5 Iron", 15.0, 129.0, 5200, "blue"),
-            Club("6 Iron", 16.5, 121.0, 5800, "mediumblue"),
-            Club("7 Iron", 18.0, 114.0, 6500, "royalblue"),
-            Club("8 Iron", 20.0, 104.5, 7300, "navy"),
-            Club("9 Iron", 22.5, 96.0, 8300, "skyblue"),
-            Club("Pitching Wedge", 25.5, 86.5, 9400, "magenta"),
-            Club("Gap Wedge", 28.5, 79.5, 10300, "violet"),
-            Club("Sand Wedge", 31.5, 72.0, 11100, "orchid"),
-            Club("Lob Wedge", 35.0, 66.0, 11900, "purple"),
-            Club("Putter", 3.0, 12.0, 0, "grey")
+            Club("Driver", 12.0, 175.0, 2500, "red", 90),
+            Club("3 Wood", 11.0, 166.5, 3200, "orange", 80),
+            Club("5 Wood", 12.5, 153.0, 3800, "chocolate", 80),
+            Club("4 Hybrid", 14.0, 141.0, 4500, "limegreen", 80),
+            Club("5 Iron", 15.0, 129.0, 5200, "blue", 67),
+            Club("6 Iron", 16.5, 121.0, 5800, "mediumblue", 67),
+            Club("7 Iron", 18.0, 114.0, 6500, "royalblue", 67),
+            Club("8 Iron", 20.0, 104.5, 7300, "navy", 67),
+            Club("9 Iron", 22.5, 96.0, 8300, "skyblue", 67),
+            Club("Pitching Wedge", 25.5, 86.5, 9400, "magenta", 50),
+            Club("Gap Wedge", 28.5, 79.5, 10300, "violet", 42),
+            Club("Sand Wedge", 31.5, 72.0, 11100, "orchid", 35),
+            Club("Lob Wedge", 35.0, 66.0, 11900, "purple", 30),
+            Club("Putter", 3.0, 12.0, 0, "grey", 0)
         ]
 
 class Hole:
@@ -132,61 +133,63 @@ class Hole:
         }
 
         return friction.get(surface, 0.88)
-    
-    def simulate_flight(self, start_position, club, power, direction):
 
-        gravity = 10.73
-        dt = 0.01
+    def get_handicap_norm(self):
+        return 1 - (self.player.handicap + 54) / 62
 
-        handicap_norm = 1 - (self.player.handicap + 54) / 62
-
-        if club.name == "Driver":
-            max_axis = 90
-        elif "Wood" in club.name or "Hybrid" in club.name:
-            max_axis = 80
-        elif "Iron" in club.name:
-            max_axis = 67
-        elif "Pitching" in club.name:
-            max_axis = 50
-        elif "Gap" in club.name:
-            max_axis = 42
-        elif "Sand" in club.name:
-            max_axis = 35
-        else:
-            max_axis = 30
-
-        std_dev = (max_axis * handicap_norm) / 3
+    def calculate_spin_axis(self, club):
+        std_dev = (club.max_axis * self.get_handicap_norm()) / 3
 
         while True:
             spin_axis = random.gauss(0, std_dev)
-            if -max_axis <= spin_axis <= max_axis:
-                break
 
+            if -club.max_axis <= spin_axis <= club.max_axis:
+                return spin_axis
+
+    def calculate_shot_speed(self, club, power, power_scale=100.0):
         max_speed = club.ball_speed
         min_speed = max_speed * 0.2
         speed_range = max_speed - min_speed
 
-        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 100.0)
+        speed = (min_speed + (speed_range - random.random() * speed_range * self.get_handicap_norm()))
 
+        return speed * 0.48889 * (power / power_scale)
+
+    def calculate_launch_angle(self, club):
         max_launch = club.launch_angle
         min_launch = max_launch * 0.2
         launch_range = max_launch - min_launch
 
-        launch_angle = np.radians((min_launch + (launch_range - (random.random() * launch_range * handicap_norm))))
-        direction_angle = np.radians(direction)
+        launch_angle = (min_launch + (launch_range - random.random() * launch_range * self.get_handicap_norm()))
 
-        x = start_position[0]
-        y = start_position[1]
-        z = self.get_height(x, y)
+        return np.radians(launch_angle)
+
+    def calculate_initial_velocity(self, speed, launch_angle, direction):
+        direction_angle = np.radians(direction)
 
         vx = speed * np.cos(launch_angle) * np.cos(direction_angle)
         vy = speed * np.cos(launch_angle) * np.sin(direction_angle)
         vz = speed * np.sin(launch_angle)
 
+        return vx, vy, vz
+    
+    def simulate_flight(self, start_position, club, power, direction):
+        gravity = 10.73
+        dt = 0.01
+
+        spin_axis = self.calculate_spin_axis(club)
+        speed = self.calculate_shot_speed(club, power)
+        launch_angle = self.calculate_launch_angle(club)
+
+        vx, vy, vz = self.calculate_initial_velocity(speed, launch_angle, direction)
+
+        x = start_position[0]
+        y = start_position[1]
+        z = self.get_height(x, y)
+
         trajectory = []
 
         while True:
-
             drag = 0.95 ** dt
 
             vx *= drag
@@ -215,7 +218,7 @@ class Hole:
 
             x += vx * dt
             y += vy * dt
-            z += vz * dt            
+            z += vz * dt
 
             trajectory.append([x, y, z])
 
@@ -328,13 +331,7 @@ class Hole:
         y = start_position[1]
         z = self.get_height(x, y)
 
-        handicap_norm = 1 - (self.player.handicap + 54) / 62
-
-        max_speed = club.ball_speed
-        min_speed = max_speed * 0.2
-        speed_range = max_speed - min_speed
-
-        speed = (min_speed + (speed_range - (random.random() * speed_range * handicap_norm))) * 0.48889 * (power / 20.0)
+        speed = self.calculate_shot_speed(club, power, power_scale=20.0)
 
         vx = speed * np.cos(direction_angle)
         vy = speed * np.sin(direction_angle)
