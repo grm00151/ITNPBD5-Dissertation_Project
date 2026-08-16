@@ -93,13 +93,17 @@ class Hole:
         return surfaces.get(colour, "unknown")
 
     def create_mesh(self):
-
         x = np.arange(self.cols, dtype=np.float32)
         y = np.arange(self.rows, dtype=np.float32)
 
         xx, yy = np.meshgrid(x, y)
 
         self.grid = pv.StructuredGrid(xx, yy, self.heightmap)
+
+        rgb = np.flipud(np.rot90(self.surfacemap))
+        rgb = rgb.reshape(-1, 3)
+
+        self.grid["SurfaceColours"] = rgb
 
     def get_height(self, x, y):
         
@@ -119,6 +123,15 @@ class Hole:
             return next(i for i, club in enumerate(self.player.clubs) if club.name == "Putter")
         
         return club_index
+
+    def get_friction(self, surface):
+        friction = {
+            "fairway": 0.95,
+            "rough": 0.90,
+            "green": 0.97
+        }
+
+        return friction.get(surface, 0.88)
     
     def simulate_flight(self, start_position, club, power, direction):
 
@@ -297,14 +310,8 @@ class Hole:
 
             if surface == "out":
                 return True, x, y, z
-            elif surface == "fairway":
-                friction = 0.95
-            elif surface == "rough":
-                friction = 0.90
-            elif surface == "green":
-                friction = 0.97
-            else:
-                friction = 0.88
+
+            friction = self.get_friction(surface)
 
             roll_speed *= friction
 
@@ -365,14 +372,8 @@ class Hole:
 
             if surface == "out":
                 return np.array([x, y, z]), trajectory, True
-            elif surface == "fairway":
-                friction = 0.95
-            elif surface == "rough":
-                friction = 0.90
-            elif surface == "green":
-                friction = 0.97
-            else:
-                friction = 0.88
+
+            friction = self.get_friction(surface)
 
             vx *= friction
             vy *= friction
@@ -404,7 +405,7 @@ class Hole:
 
         plotter = pv.Plotter()
 
-        plotter.add_mesh(self.grid, cmap="terrain")
+        plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
         def pick_point(point):
             print("\nSelected point:")
@@ -423,11 +424,6 @@ class Hole:
         print(self.get_surface(position[0], position[1]))
         
         plotter = pv.Plotter() 
-
-        rgb = np.flipud(np.rot90(self.surfacemap))
-        rgb = rgb.reshape(-1, 3)
-
-        self.grid["SurfaceColours"] = rgb
         
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
@@ -444,11 +440,6 @@ class Hole:
     def show_strategy(self, solution, screenshot=None):
 
         plotter = pv.Plotter(off_screen=screenshot is not None)
-
-        rgb = np.flipud(np.rot90(self.surfacemap))
-        rgb = rgb.reshape(-1, 3)
-
-        self.grid["SurfaceColours"] = rgb
 
         plotter.add_mesh(self.grid, scalars="SurfaceColours", rgb=True)
 
