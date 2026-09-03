@@ -22,9 +22,11 @@ class Eval(FloatProblem):
 		self.objectives = obj
 		self.constraints = 0
 
+		#store the golf hole so it can be used when evaluating strategies 
 		self.hole = hole
 		
 		# What are the names for the objectives
+		# The two objectives are distance from the hole and number of strokes
 		self.obj_labels = ['Distance', 'Strokes']
 
 	def name(self) -> str:
@@ -70,43 +72,61 @@ class Eval(FloatProblem):
 		return score 
 	
 	def evalGolfStrategy(self, variables):
-		
+
+		# make a copy of the tee position so that it can be updated 
 		position = np.copy(self.hole.tee_position)
-		
+
+		# the radius within which the ball is considered to be in the hole
 		HOLE_RADIUS = 1.0
+
+		# start the number of strokes at zero 
 		strokes = 0
 
+		# create an empty list to store the trajectory of every shot
 		trajectories = []
-		
+
+		# Each shot used 3 variables: 1 = power, 2 = direction and 3 = club
 		for i in range(0, len(variables), 3):
-			
+
+			# gets the power value for the current shot
 			power = variables[i]
+			# gets the direction value for the current shot
 			direction = variables[i + 1]
-			
+
+			# get the club value and round it because the optimiser produces a floating point number and is within range
 			club = int(round(variables[i + 2]))
 			club = int(np.clip(club, 0, len(self.hole.player.clubs) - 1))
 
+			# check whether the selected club is allowed from the balls current position
 			club = self.hole.get_allowed_club(position, club)
+			# store the corrected club value back into the variable
 			variables[i + 2] = club
-			
+
+			#Simulate the golf shit using the current position, power, direction and club of current shot
 			position, trajectory, out_of_bounds, club = self.hole.simulate_shot(position, power, direction, club)
 
+			# add current shots trajectory and club to the trajectory list
 			trajectories.append((trajectory, club))
 
+			# check if the ball is out of bounds 
 			if out_of_bounds:
+				# return large vales so the optimiser treats this silution as bad
 				return (1e6, 1e6, trajectories)
 
+			# the player has taken another stroke
 			strokes += 1
-			
+
+			# calculates the distance between the current ball position and the hole
 			distance = np.linalg.norm(position - self.hole.hole_position)
 			
-			# Hole reached
+			# check if the ball is close enough to count as holed
 			if distance <= HOLE_RADIUS:
 				return 0.0, strokes, trajectories
 			
-		# Hole not reached
+		# calculate the final distance between the ball and the hole if not reached
 		final_distance = np.linalg.norm(position - self.hole.hole_position)
-			
+
+		# return remaining distance, strokes and trajectories
 		return final_distance, strokes, trajectories
 
 	# evaluate is called by the code in solver.py but you only need to edit
@@ -124,26 +144,34 @@ class Eval(FloatProblem):
 		# solution.objectives[0] = 8 - self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalMaxOnes(solution.variables)
 		# solution.objectives[0] = self.evalGolfStrategyGA(solution.variables)
+
+		# evaluate the current solution as a golf strategy
 		distance, strokes, trajectories = self.evalGolfStrategy(solution.variables)
 
+		# store variables inside the solution object
 		solution.distance = distance
 		solution.strokes = strokes
 		solution.trajectories = trajectories
 		solution.holed = (distance <= 1.0)
-		
+
+		# check whether how many objective the problem has
 		if (len(solution.objectives) > 1):
+			# distance to the hole, smaller distance is better
 			solution.objectives[0] = distance
+			# strokes taken, fewer is better
 			solution.objectives[1] = strokes
 		else:
+			# combine distance and strokes into one fitness score
 			solution.objectives[0] = distance + (strokes * 200)
 
 		return solution
 
 # Test the function
 if __name__ == "__main__":
+	# tests one shot, used alot throughout development
 	
-	player = Player(-52)
+	player = Player(-32)
 	
 	hole = Hole(player, "images/heightmap.png", "images/surfacemap.png")
 	
-	hole.show_shot(hole.tee_position, power=100, direction=269, club_index=0)
+	hole.show_shot(hole.tee_position, power=100, direction=259, club_index=0)

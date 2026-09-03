@@ -178,6 +178,12 @@ Improved modelling
 Multiple hole support
 ```
 
+## Acknowledgements
+
+The inital versions of solver.py and eval.py were provided by my supervisor as starter code for the project. The code was adapted as part of the development of the golf strategy optimisation framework.
+
+ChatGPT was used as a coding support tool during the development of this project. Any sections of code where AI assistnaces was used are commented and the prompts/responses with these sections are provided as part of the documnetation. 
+
 ## Author
 
 Graeme MacDonald 
